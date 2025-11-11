@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# setup_gradle_wrapper
+set -euo pipefail
+
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE}")" && pwd)"
+ZIP_FILE="$HOME/Downloads/gradle-9.2.0-bin.zip"
+
+echo "=== Aurora Engine Gradle Wrapper Setup ==="
+echo "Project: $PROJECT_DIR"
+echo "ZIP: $ZIP_FILE"
+
+# 1. Verify ZIP
+[[ -f "$ZIP_FILE" ]] || {
+    echo "ERROR: $ZIP_FILE not found"
+    exit 1
+}
+
+# 2. Clean old wrapper only (not the Gradle dir yet)
+echo "Cleaning old wrapper..."
+rm -rf "$PROJECT_DIR/gradlew" "$PROJECT_DIR/gradlew.bat" "$PROJECT_DIR/gradle/wrapper"
+
+# 3. Extract to project root temporarily
+echo "Extracting Gradle..."
+unzip -q "$ZIP_FILE" -d "$PROJECT_DIR"
+GRADLE_BIN="$PROJECT_DIR/gradle-9.2.0/bin/gradle"
+
+# 4. Generate wrapper (needs full Gradle present)
+echo "Generating wrapper..."
+"$GRADLE_BIN" wrapper \
+    --gradle-version=9.2.0 \
+    --distribution-type=bin \
+    --project-dir="$PROJECT_DIR"
+
+# 5. Clean up extracted Gradle (wrapper is now self-contained)
+echo "Cleaning up temporary Gradle installation..."
+rm -rf "$PROJECT_DIR/gradle-9.2.0"
+
+# 6. Verify
+[[ -f "$PROJECT_DIR/gradle/wrapper/gradle-wrapper.jar" ]] || {
+    echo "ERROR: Wrapper JAR missing"
+    exit 1
+}
+
+echo "SUCCESS: Wrapper generated"
+echo "Test: ./gradlew --version"
