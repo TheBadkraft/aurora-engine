@@ -7,6 +7,11 @@ import java.util.Collections;
 public record ParseResult<T>(
         T result,
         List<ParseError> errors) {
+
+    public T result() {
+        return result;
+    }
+
     public static <T> ParseResult<T> success(T result) {
         return new ParseResult<>(result, Collections.emptyList());
     }

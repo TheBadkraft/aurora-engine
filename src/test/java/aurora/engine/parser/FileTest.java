@@ -1,9 +1,7 @@
 // src/test/java/aurora/engine/parser/FileTest.java
 package aurora.engine.parser;
 
-// import aurora.engine.parser.aml.AmlParser;
-// import aurora.engine.parser.ParseResult;
-// import java.nio.file.*;
+import java.nio.file.*;
 
 import aurora.engine.validators.ValidationResult;
 import aurora.engine.validators.Validators;
@@ -16,10 +14,14 @@ public class FileTest {
         // Validate file path
         ValidationResult validationResult =
                 Validators.validateFilePath(filePath);
+        Path path = null;
 
         switch (validationResult.getCode()) {
             case 0:
-                System.out.println("File is valid: " + validationResult.getMessage());
+                System.out.println(validationResult.getMessage());
+                assert filePath != null;    // we know it's not null here
+                path = Paths.get(filePath);
+
                 break;
             case 1:
             case 2:
@@ -31,15 +33,35 @@ public class FileTest {
                 return;
         }
 
-        // ParseResult<?> result = AmlParser.parse(path); // lexer-less
-        // if (!result.errors().isEmpty()) {
-        // System.out.printf("FAILED — %d error(s)%n", result.errors().size());
-        // result.errors().forEach(e -> System.err.printf(" [%d:%d] %s%n", e.line(),
-        // e.col(), e.message()));
-        // return;
-        // }
+        ParseResult<?> result = AuroraParser.parse(path); // lexer-less
+        var document = (AuroraDocument)result.result();
+        if (document == null) {
+            System.out.println("No document parsed.");
+            return;
+        }
+        if (document.isEmpty()) {
+            System.out.println("Document is empty.");
+            return;
+        }
+        if (document.isParsed()) {
+            System.out.println("Document is parsed.");
+            if(document.hasNoDialect()) {
+                System.out.println("Document dialect could not be determined.");
+            }
+            else {
+                System.out.println("Document dialect: " + document.getDialect());
+            }
+        } else {
+            System.out.println("Document did not complete parsing.");
+        }
+        if (!result.errors().isEmpty()) {
+            System.out.printf("FAILED — %d error(s)%n", result.errors().size());
+            result.errors().forEach(e -> System.err.printf(" [%d:%d] %s%n", e.line(),
+                e.col(), e.message()));
+            return;
+        }
 
-        // System.out.println("PASS");
-        // System.out.println(result.result());
+        System.out.println("PASS");
+        System.out.println(result.result());
     }
 }

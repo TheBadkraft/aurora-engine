@@ -1,7 +1,10 @@
-// src/main/java/aurora/engine/parser/aml/AmlParser.java
-package aurora.engine.parser.aml;
+// src/main/java/aurora/engine/parser/AmlParser.java
+package aurora.engine.parser;
 
-import aurora.engine.parser.*;
+import aurora.engine.parser.aml.Model;
+import aurora.engine.parser.aml.NamedModel;
+import aurora.engine.utilities.Utils;
+
 import java.nio.file.*;
 import java.io.IOException;
 import java.util.*;
@@ -17,13 +20,22 @@ public class AmlParser {
         this.source = source;
     }
 
-    public static ParseResult<List<NamedModel>> parse(Path path) {
+    public static ParseResult<AuroraDocument> parse(Path path) {
         try {
             String content = Files.readString(path);
+            Dialect dialect = Dialect.fromFileExtension(
+                    Utils.getFileExtension(path));
             AmlParser parser = new AmlParser(content);
-            List<NamedModel> models = parser.parseDocument();
+            /*
+                here's the problem - before we can start getting models, we need to validate the document:
+                - shebang (optional) but must be first line if present
+                - if no shebang, we can still proceed, but file extension (.aml or .asl)
+                  can be a hint, otherwise we assume #!asl as least restrictive
+                - then we start parsing top-level statement (e.g., assignments, model definitions, etc.)
+             */
+            var doc = parser.parseDocument(dialect);
             return parser.errors.isEmpty()
-                    ? ParseResult.success(models)
+                    ? ParseResult.success(doc)
                     : ParseResult.failure(parser.errors);
         } catch (IOException e) {
             return ParseResult.failure(List.of(
@@ -31,16 +43,34 @@ public class AmlParser {
         }
     }
 
-    private List<NamedModel> parseDocument() {
-        List<NamedModel> models = new ArrayList<>();
+    /*
+        Now we have a dialect hint passed from the file extension. So if the shebang is missing,
+        we can assume the dialect from the file extension. If the shebang is present, it overrides
+        the file extension hint.
+
+        What if the shebang doesn't match the file extension? We can either:
+        - throw an error
+        - warn and proceed with shebang dialect
+
+        Another option is to ignore the shebang and use the file extension dialect ... except, since
+        we are calling the file extension a hint, we should probably let the shebang take precedence.
+     */
+    private AuroraDocument parseDocument(Dialect hint) {
+        // since we allow whitespace and comments prior to shebang, let's skip whitespace first
         skipWhitespace();
-        if (matchShebang())
-            skipLine();
-        while (!isAtEnd()) {
-            models.add(parseNamedObject());
-            skipWhitespace();
-        }
-        return models;
+
+//        List<NamedModel> models = new ArrayList<>();
+//        skipWhitespace();
+//        if (matchShebang())
+//            skipLine();
+//        while (!isAtEnd()) {
+//            models.add(parseNamedObject());
+//            skipWhitespace();
+//        }
+        var doc = new AuroraDocument();
+        doc.isParsed = true;
+
+        return doc;
     }
 
     private NamedModel parseNamedObject() {
@@ -52,12 +82,21 @@ public class AmlParser {
         skipWhitespace();
         while (peek() != '}') {
             if (isAlpha(peek())) {
-                String key = consumeId();
-                expectSeq(":=");
-                Object value = parseValue();
-                fields.put(key, value);
+                int startPos = pos;
+                String potentialId = consumeId();
+                skipWhitespace();
+                if (peek() == ':') {
+                    // field
+                    expectSeq(":=");
+                    Object value = parseValue();
+                    fields.put(potentialId, value);
+                } else {
+                    // child, rewind
+                    pos = startPos;
+                    children.add(parseNamedObject());
+                }
             } else {
-                children.add(parseNamedObject());
+                error("Expected identifier");
             }
             skipWhitespace();
         }
@@ -161,14 +200,14 @@ public class AmlParser {
     private String consumeString(char quote) {
         StringBuilder sb = new StringBuilder();
         advance();
-        while (peek() != quote && !isAtEnd()) {
+        while (peek() != quote && !isEOF()) {
             if (peek() == '\n') {
                 line++;
                 col = 1;
             }
             sb.append(advance());
         }
-        if (isAtEnd()) {
+        if (isEOF()) {
             error("Unterminated string");
             return "";
         }
@@ -209,9 +248,9 @@ public class AmlParser {
     private String consumeEmbed() {
         advance();
         StringBuilder sb = new StringBuilder();
-        while (peek() != '`' && !isAtEnd())
+        while (peek() != '`' && !isEOF())
             sb.append(advance());
-        if (isAtEnd()) {
+        if (isEOF()) {
             error("Unterminated embed");
             return "";
         }
@@ -220,25 +259,26 @@ public class AmlParser {
     }
 
     // --- helpers ---
-    private boolean isAtEnd() {
+    private boolean isEOF() {
         return pos >= source.length();
     }
 
     private char peek() {
-        return isAtEnd() ? '\0' : source.charAt(pos);
+        return isEOF() ? '\0' : source.charAt(pos);
     }
 
     private char peekNext() {
         return pos + 1 >= source.length() ? '\0' : source.charAt(pos + 1);
     }
 
+    // prefer an advance n and return current char - default n=1
     private char advance() {
         col++;
         return source.charAt(pos++);
     }
 
     private boolean match(char expected) {
-        if (isAtEnd() || source.charAt(pos) != expected)
+        if (isEOF() || source.charAt(pos) != expected)
             return false;
         pos++;
         col++;
@@ -289,7 +329,7 @@ public class AmlParser {
     }
 
     private void skipLineComment() {
-        while (peek() != '\n' && !isAtEnd())
+        while (peek() != '\n' && !isEOF())
             advance();
     }
 
@@ -297,7 +337,7 @@ public class AmlParser {
         advance();
         advance();
         int nest = 1;
-        while (nest > 0 && !isAtEnd()) {
+        while (nest > 0 && !isEOF()) {
             if (peek() == '*' && peekNext() == '/') {
                 advance();
                 advance();
@@ -312,9 +352,9 @@ public class AmlParser {
     }
 
     private void skipLine() {
-        while (peek() != '\n' && !isAtEnd())
+        while (peek() != '\n' && !isEOF())
             advance();
-        if (!isAtEnd()) {
+        if (!isEOF()) {
             line++;
             col = 1;
             advance();
@@ -327,8 +367,8 @@ public class AmlParser {
         skipWhitespace();
         boolean matched = source.startsWith("#!aurora aml", pos);
         if (matched) {
-            pos += "#!aurora aml".length();
-            col += "#!aurora aml".length();
+            pos += "#!aml".length();
+            col += "#!aml".length();
         } else {
             pos = save;
             line = saveLine;
@@ -343,7 +383,7 @@ public class AmlParser {
     }
 
     private void recover() {
-        while (!isAtEnd() && peek() != '\n' && peek() != ';')
+        while (!isEOF() && peek() != '\n' && peek() != ';')
             advance();
     }
 

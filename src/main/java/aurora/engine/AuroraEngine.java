@@ -1,7 +1,8 @@
 // src/main/java/aurora/engine/AuroraEngine.java
 package aurora.engine;
 
-import aurora.engine.parser.aml.AmlParser;
+import aurora.engine.parser.AuroraParser;
+import aurora.engine.parser.AuroraDocument;
 import aurora.engine.parser.aml.NamedModel;
 import aurora.engine.parser.aml.Model;
 import aurora.engine.parser.ParseResult;
@@ -31,13 +32,13 @@ public final class AuroraEngine {
             stream.filter(p -> p.toString().endsWith(".aml"))
                     .forEach(path -> {
                         System.out.println("Loading: " + path);
-                        ParseResult<List<NamedModel>> result = AmlParser.parse(path);
+                        ParseResult<AuroraDocument> result = AuroraParser.parse(path);
                         if (!result.errors().isEmpty()) {
                             System.out.println("  Failed:");
                             result.errors().forEach(
                                     e -> System.err.printf("    [%d:%d] %s%n", e.line(), e.col(), e.message()));
                         } else {
-                            result.result().forEach(registry::register);
+//                            result.result().forEach(registry::register);
                         }
                     });
         } catch (Exception e) {
