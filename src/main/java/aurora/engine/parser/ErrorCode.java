@@ -6,6 +6,10 @@ public enum ErrorCode {
     UNEXPECTED_CHAR(1001, "Unexpected character"),
     UNTERMINATED_STRING(1002, "Unterminated string literal"),
     IO_ERROR(1003, "I/O error during file reading"),
+    EXPECTED_BACKTICK(1004, "Expected freeform literal enclosure"),
+    UNTERMINATED_FREEFORM(1005, "Unterminated freeform literal"),
+    INVALID_NUMBER(1006, "Invalid number format"),
+    INVALID_EXPONENT(1007, "Invalid exponent format"),
 
     // PARSER - TOP LEVEL (200x)
     EXPECTED_IDENTIFIER(2001, "Expected identifier"),
@@ -20,10 +24,14 @@ public enum ErrorCode {
     EXPECTED_OBJECT_CLOSE(3003, "Expected '}' to close object"),
     TRAILING_COMMA_IN_OBJECT(3004, "Trailing comma in object"),
     ERRORS_IN_OBJECT(3099, "Errors found in object fields"),
+    TRAILING_COMMA_IN_ARRAY(3006, "Trailing comma in array"),
+    EXPECTED_ARRAY_CLOSE(3007, "Expected ']' to close array"),
 
     // SEMANTIC (400x)
     DUPLICATE_FIELD_IN_OBJECT(4001, "Duplicate identifier in document or object"),
-    INVALID_KEY_IN_OBJECT(4002, "Invalid key as identifier");
+    INVALID_KEY_IN_OBJECT(4002, "Invalid key as identifier"),
+    IDENTIFIER_IS_KEYWORD(4003, "Identifier cannot be a keyword"),
+    ATTRIBUTE_IS_KEYWORD(4004, "Attribute name cannot be a keyword"),;
 
     private final int code;
     private final String message;

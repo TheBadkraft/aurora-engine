@@ -8,7 +8,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 public sealed interface Value
-        permits Value.NullValue, Value.BooleanValue, Value.NumberValue, Value.StringValue, Value.RangeValue, Value.ArrayValue, Value.ObjectValue {
+        permits Value.NullValue, Value.BooleanValue, Value.NumberValue, Value.StringValue,
+        Value.RangeValue, Value.ArrayValue, Value.ObjectValue, Value.FreeformValue {
 
     @Override
     String toString();
@@ -25,38 +26,58 @@ public sealed interface Value
     }
     /** Number value representation.
      */
-    record NumberValue(double value) implements Value {
+    record NumberValue(double value, String source) implements Value {
         @Override public @NotNull String toString() {
-            long l = (long) value;
-            return value == l ? Long.toString(l) : Double.toString(value);
+            return source;
         }
     }
     /** String value representation.
      */
     record StringValue(String value) implements Value {
-        @Override public @NotNull String toString() { return "\"" + value + "\""; }
+        @Override
+        public @NotNull String toString() { return "\"" + value + "\""; }
     }
     /** Range value representation.
      */
     record RangeValue(int min, int max) implements Value {
-        @Override public @NotNull String toString() { return min + ".." + max; }
+        @Override
+        public @NotNull String toString() { return min + ".." + max; }
     }
     /** Array value representation.
      */
-    record ArrayValue(List<Value> elements) implements Value {
-        @Override public @NotNull String toString() {
-            return "[" + elements.stream()
+    record ArrayValue(List<Value> elements, String source) implements Value {
+        public ArrayValue(List<Value> elements) {
+            this(elements, null);
+        }
+
+        @Override
+        public @NotNull String toString() {
+            return source != null ? source : "[" + elements.stream()
                     .map(Value::toString)
                     .collect(Collectors.joining(", ")) + "]";
         }
     }
     /** Object value representation.
      */
-    record ObjectValue(Map<String, Value> fields) implements Value {
-        @Override public @NotNull String toString() {
-            return "{" + fields.entrySet().stream()
+    record ObjectValue(Map<String, Value> fields, String source) implements Value {
+        public ObjectValue(Map<String, Value> fields) {
+            this(fields, null);
+        }
+
+        @Override
+        public @NotNull String toString() {
+            return source != null ? source : "{" + fields.entrySet().stream()
                     .map(e -> e.getKey() + " := " + e.getValue())
                     .collect(Collectors.joining(", ")) + "}";
+        }
+    }
+    /** Freeform value representation.
+     */
+    record FreeformValue(String content, String attrib) implements Value {
+        public FreeformValue(String content) { this(content, null); }
+
+        @Override public @NotNull String toString() {
+            return (attrib != null ? "@" + attrib : "") + content;
         }
     }
 }
