@@ -1,0 +1,7 @@
+#!aml
+
+color := #ff00aa
+pi    := 3.14
+life  := 42
+pix   := 3.14159e-10
+valid := true       // boolean value (technically a 1|0 integer)

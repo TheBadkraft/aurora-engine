@@ -9,7 +9,14 @@ import java.nio.file.*;
 import java.io.IOException;
 import java.util.*;
 
+import static aurora.engine.parser.ValueParseResult.failure;
+import static aurora.engine.parser.ValueParseResult.success;
+
 public class AuroraParser {
+    public static final Set<String> KEYWORDS = Set.of(
+            "true", "false", "null", "vars", "include"
+            // "return", "if", "else", "for", "while" // reserved for future use
+    );
     private final String source;
     private final List<ParseError> errors = new ArrayList<>();
     private boolean hasShebang = false;
@@ -80,8 +87,13 @@ public class AuroraParser {
             }
             // parse identifier ... every top-level statement starts with an identifier
             int len;
-            if ((len = expectIdentifier()) > 0) {
+            if ((len = isIdentifier()) > 0) {
                 String id = consume(len);
+                if (isKeyword(id)) {
+                    error(ErrorCode.IDENTIFIER_IS_KEYWORD, line, col);
+                    recover();
+                    continue;
+                }
                 // for now, we just create a placeholder statement
                 doc.addIdentifier(id);
                 // after statement, expect line ending (, or EOL or EOF)
@@ -109,7 +121,7 @@ public class AuroraParser {
     private Dialect detectDialect(Dialect hint) {
         skipLeadingLayout();
 
-        if (expectShebang()) {
+        if (isShebang()) {
             String token = consume(5); // "#!asl" or "#!aml"
             return Dialect.fromShebang(token);
         }
@@ -119,7 +131,7 @@ public class AuroraParser {
 
     private Statement parseStatement(String id) {
         // 1. try assignment operator
-        if(expectOperator(Operator.ASSIGN)) {
+        if(isOperator(Operator.ASSIGN)) {
             if(!consume(Operator.ASSIGN.symbol().length()).isEmpty()) {
                 skipWhitespace();
                 // we have an assignment operator so we parse value ...
@@ -137,69 +149,132 @@ public class AuroraParser {
         }
 
         // no assignment operator
-        error(ErrorCode.EXPECTED_ASSIGN);
+        error(ErrorCode.EXPECTED_ASSIGN, line, col);
         return null;
     }
 
     private @NotNull ValueParseResult<Value> parseValue() {
-        if (expectOperator(Operator.L_BRACE)) {
-            consumeOperator(Operator.L_BRACE);
+        // object type
+        if (isOperator(Operator.L_BRACE)) {
             return parseAnonymousObject();
         }
-        if (expect("null")) {
-            consume(4);
-            return ValueParseResult.success(new Value.NullValue());
+        // array type
+        if (isOperator(Operator.L_BRACKET)) {
+            return parseArray();
         }
-        if (expect("true")) {
-            consume(4);
-            return ValueParseResult.success((new Value.BooleanValue(true)));
+        // primitive types
+        if (is("@")) {
+            return parseFreeform();
         }
-        if (expect("false")) {
+        if (is("null")) {
+            consume(4);
+            return success(new Value.NullValue());
+        }
+        if (is("true")) {
+            consume(4);
+            return success((new Value.BooleanValue(true)));
+        }
+        if (is("false")) {
             consume(5);
-            return ValueParseResult.success((new Value.BooleanValue(false)));
+            return success((new Value.BooleanValue(false)));
         }
-        if (expectNumber()) {
-            int num = matchNumber();
-            return ValueParseResult.success(new Value.NumberValue(num));
-        }
-        if (expectOperator(Operator.QUOTE)) {
+        if (isOperator(Operator.QUOTE)) {
             consumeOperator(Operator.QUOTE);
             String value = matchString();
-            if (expectOperator(Operator.QUOTE)) {
+            if (isOperator(Operator.QUOTE)) {
                 consumeOperator(Operator.QUOTE);
-                return ValueParseResult.success(new Value.StringValue(value));
+                return success(new Value.StringValue(value));
             } else {
-                return ValueParseResult.failure(ErrorCode.UNTERMINATED_STRING, line, col);
+                return failure(ErrorCode.UNTERMINATED_STRING, line, col);
+            }
+        } else {
+            NumericParseResult numeric = parseNumber();
+            if (numeric.isSuccess()) {
+                return ValueParseResult.success(numeric.value());
+            } else if (!numeric.errors().isEmpty()) {
+                return ValueParseResult.failure(numeric.errors());
             }
         }
 
-        return ValueParseResult.failure(ErrorCode.EXPECTED_VALUE, line, col);
+        return failure(ErrorCode.EXPECTED_VALUE, line, col);
+    }
+
+    private NumericParseResult parseNumber() {
+        int start = pos;
+        int startLine = line, startCol = col;
+        boolean isHex = false;
+
+        // Optional sign
+        if (peek(0) == '-') consume();
+
+        // Hex: #ff00aa
+        if (peek(0) == '#' && isHexDigit(peek(1))) {
+            consume(); // #
+            isHex = true;
+            while (isHexDigit(peek(0))) consume();
+        } else {
+            // Decimal digits
+            while (isDigit(peek(0))) consume();
+
+            // Fractional part
+            if (peek(0) == '.') {
+                consume();
+                while (isDigit(peek(0))) consume();
+            }
+
+            // Exponent
+            if (peek(0) == 'e' || peek(0) == 'E') {
+                consume();
+                if (peek(0) == '+' || peek(0) == '-') consume();
+                if (!isDigit(peek(0))) {
+                    return NumericParseResult.failure(ErrorCode.INVALID_EXPONENT, startLine, startCol);
+                }
+                while (isDigit(peek(0))) consume();
+            }
+        }
+
+        String numStr = source.substring(start, pos);
+        try {
+            double value = isHex
+                    ? Long.parseLong(numStr.substring(1), 16)
+                    : Double.parseDouble(numStr);
+            return NumericParseResult.success(new Value.NumberValue(value, numStr));
+        } catch (NumberFormatException e) {
+            return NumericParseResult.failure(ErrorCode.INVALID_NUMBER, startLine, startCol);
+        }
     }
 
     private @NotNull ValueParseResult<Value> parseAnonymousObject() {
         Map<String, Value> fields = new HashMap<>();
         List<ParseError> errors = new ArrayList<>();
-        int startLine = line, startCol = col;
-        boolean loop = !expectOperator(Operator.R_BRACE);
+        int start = pos;
+        boolean loop = !isOperator(Operator.R_BRACE);
+
+        consumeOperator(Operator.L_BRACE);
         while (!isEOF() && loop) {
             skipWhitespace();
 
-            // 1. Key (identifier)
-            String field = matchIdentifier();
-            if (field == null) {
+            // 1. Field (identifier)
+            int idLen = isIdentifier();
+            if (idLen == 0) {
                 errors.add(new ParseError(line, col, ErrorCode.EXPECTED_OBJECT_FIELD));
+                recoverToObjectEnd();
+                break;
+            }
+            String field = consume(idLen);
+            if(isKeyword(field)) {
+                errors.add(new ParseError(line, col, ErrorCode.INVALID_KEY_IN_OBJECT));
                 recoverToObjectEnd();
                 break;
             }
             // 2. Assignment operator
             skipWhitespace();
-            if (!expectOperator(Operator.ASSIGN)) {
+            if (!isOperator(Operator.ASSIGN)) {
                 errors.add(new ParseError(line, col, ErrorCode.EXPECTED_ASSIGN));
                 recoverToObjectEnd();
                 break;
-            } else {
-                consumeOperator(Operator.ASSIGN);
             }
+            consumeOperator(Operator.ASSIGN);
             // 3. Value
             skipWhitespace();
             var valueResult = parseValue();
@@ -208,42 +283,132 @@ public class AuroraParser {
                 recoverToObjectEnd();
                 break;
             }
-
             // 4. Check for duplicate field
             if (fields.containsKey(field)) {
                 errors.add(new ParseError(line, col, ErrorCode.DUPLICATE_FIELD_IN_OBJECT));
             } else {
                 fields.put(field, valueResult.value());
             }
-
             // 5. Separator (, or \n) or end block
-            if (expectOperator(Operator.COMMA)) {
+            if (isOperator(Operator.COMMA)) {
                 consumeOperator(Operator.COMMA);
             }
-            if (expectOperator(Operator.NEWLINE)){
+            if (isOperator(Operator.NEWLINE)){
                 consumeOperator(Operator.NEWLINE);
             }
 
             skipWhitespace();
-            loop = !expectOperator(Operator.R_BRACE);
+            loop = !isOperator(Operator.R_BRACE);
         }
 
-        if (expectOperator(Operator.R_BRACE)) {
-            consumeOperator(Operator.R_BRACE);
-            if (errors.isEmpty()) {
-                return ValueParseResult.success(new Value.ObjectValue(fields));
-            } else {
-                errors.add(new ParseError(startLine, startCol, ErrorCode.ERRORS_IN_OBJECT));
-            }
-        } else {
-            errors.add(new ParseError(startLine, startCol, ErrorCode.EXPECTED_OBJECT_CLOSE));
+
+        // ---- Closing brace ----
+        if (!isOperator(Operator.R_BRACE)) {
+            errors.add(new ParseError(line, col, ErrorCode.EXPECTED_OBJECT_CLOSE));
             recoverToObjectEnd();
             return ValueParseResult.failure(errors);
         }
+        consumeOperator(Operator.R_BRACE);
 
+        String sourceText = source.substring(start, pos);
         return errors.isEmpty()
-                ? ValueParseResult.success(new Value.ObjectValue(Map.copyOf(fields)))
+                ? ValueParseResult.success(new Value.ObjectValue(Map.copyOf(fields), sourceText))
                 : ValueParseResult.failure(errors);
+    }
+
+    private ValueParseResult<Value> parseArray() {
+        int fullStart = pos;
+        int startLine = line, startCol = col;
+        List<ParseError> errors = new ArrayList<>();
+        List<Value> elements = new ArrayList<>();
+
+        consume(); // consume '['
+
+        while (!isEOF() && !isOperator(Operator.R_BRACKET)) {
+            skipWhitespace();
+
+            // Optional trailing comma
+            if (isOperator(Operator.COMMA)) {
+                consumeOperator(Operator.COMMA);
+                skipWhitespace();
+                if (isOperator(Operator.R_BRACKET)) {
+                    errors.add(new ParseError(line, col, ErrorCode.TRAILING_COMMA_IN_ARRAY));
+                    break;
+                }
+                continue;
+            }
+
+            ValueParseResult<Value> elemRes = parseValue();
+            if (!elemRes.isSuccess()) {
+                errors.addAll(elemRes.errors());
+                recoverToArrayEnd();
+                break;
+            }
+            elements.add(elemRes.value());
+
+            skipWhitespace();
+            if (isOperator(Operator.COMMA)) {
+                consumeOperator(Operator.COMMA);
+                skipWhitespace();
+            }
+        }
+
+        if (!isOperator(Operator.R_BRACKET)) {
+            errors.add(new ParseError(line, col, ErrorCode.EXPECTED_ARRAY_CLOSE));
+            recoverToArrayEnd();
+            return ValueParseResult.failure(errors);
+        }
+        consumeOperator(Operator.R_BRACKET);
+
+        String sourceText = source.substring(fullStart, pos);
+        return errors.isEmpty()
+                ? ValueParseResult.success(new Value.ArrayValue(List.copyOf(elements), sourceText))
+                : ValueParseResult.failure(errors);
+    }
+
+    private ValueParseResult<Value> parseFreeform() {
+        int startLine = line, startCol = col;
+        consume();                                 // the leading '@'
+
+        // ---- optional attribute: reuse identifier parser ----
+        String attrib = null;
+        int idLen = isIdentifier();
+        if (idLen > 0) {
+            attrib = consume(idLen); // consume identifier
+            // attribute cannot be a keyword
+            if (isKeyword(attrib)) {
+                return failure(ErrorCode.ATTRIBUTE_IS_KEYWORD, startLine, startCol);
+            }
+        }
+
+        // ---- opening back-tick ----
+        if (!isOperator(Operator.BACKTICK)) {
+            return failure(ErrorCode.EXPECTED_BACKTICK, startLine, startCol);
+        }
+        consumeOperator(Operator.BACKTICK);
+
+        // ---- raw content until closing back-tick (escaped ` allowed) ----
+        int contentStart = pos;
+        while (!isEOF()) {
+            if (isOperator(Operator.BACKTICK) && !isEscaped(pos)) break;
+            consume();
+        }
+        String rawContent = source.substring(contentStart, pos);
+
+        // ---- closing back-tick ----
+        if (!isOperator(Operator.BACKTICK)) {
+            return failure(ErrorCode.UNTERMINATED_FREEFORM, line, col);
+        }
+        consumeOperator(Operator.BACKTICK);
+
+        return success(new Value.FreeformValue("`" + rawContent + "`", attrib));
+    }
+
+    /** true if the back-tick at *pos* is preceded by an odd number of \ */
+    private boolean isEscaped(int pos) {
+        int backslashes = 0;
+        for (int i = pos - 1; i >= 0 && source.charAt(i) == '\\'; i--) backslashes++;
+        return backslashes % 2 == 1;
     }
 
     // --- helpers ---
@@ -256,7 +421,13 @@ public class AuroraParser {
     private boolean isAlphaNumeric(char c) {
         return Character.isLetterOrDigit(c) || c == '_';
     }
-
+    private static boolean isDigit(char c) {
+        return c >= '0' && c <= '9';
+    }
+    private static boolean isHexDigit(char c) {
+        return isDigit(c) || (c >= 'a' && c <= 'f')
+                || (c >= 'A' && c <= 'F');
+    }
 
     private char consume() {
         if (isEOF()) return '\0';
@@ -307,14 +478,9 @@ public class AuroraParser {
             expect("/*")
             ... etc.
      */
-    private @Nullable String matchIdentifier() {
-        int len = expectIdentifier();
-        if (len == 0) return null;
-        return consume(len);
-    }
     private @NotNull String matchString() {
         StringBuilder strBuilder = new StringBuilder();
-        while (!isEOF() && !expectOperator(Operator.QUOTE)) {
+        while (!isEOF() && !isOperator(Operator.QUOTE)) {
             char c = consume();
             if (c == '\\') {
                 // escape sequence
@@ -348,25 +514,17 @@ public class AuroraParser {
         }
         return strBuilder.toString();
     }
-    private int matchNumber() {
-        StringBuilder numBuilder = new StringBuilder();
-        while (!isEOF() && Character.isDigit(peek())) {
-            numBuilder.append(consume());
-        }
-        return Integer.parseInt(numBuilder.toString());
-    }
 
-    private boolean expectShebang() {
+    private boolean isShebang() {
         // check for either #!asl or #!aml
         boolean isMatch = false;
-        if (expect("#!asl") || expect("#!aml")) {
+        if (is("#!asl") || is("#!aml")) {
             hasShebang = true;
             isMatch = true;
         }
         return isMatch;
     }
-
-    private int expectIdentifier() {
+    private int isIdentifier() {
         // match identifier at current position - should never advance so
         // we never save position -- just report the facts
         int length = 0;
@@ -378,8 +536,7 @@ public class AuroraParser {
 
         return length;
     }
-
-    private boolean expect(String s) {
+    private boolean is(String s) {
         // match string s at current position - should never advance so
         // we never save position -- just report the facts
         boolean isMatch = true;
@@ -394,11 +551,11 @@ public class AuroraParser {
         }
         return isMatch;
     }
-    private boolean expectOperator(Operator op) {
-        return expect(op.symbol());
+    private boolean isOperator(Operator op) {
+        return is(op.symbol());
     }
-    private boolean expectNumber() {
-        return !isEOF() && Character.isDigit(peek());
+    private boolean isKeyword(String s) {
+        return KEYWORDS.contains(s);
     }
 
     private void skipLeadingLayout() {
@@ -414,7 +571,6 @@ public class AuroraParser {
             }
         }
     }
-
     private void skipWhitespace() {
         while (true) {
             char c = peek();
@@ -428,12 +584,10 @@ public class AuroraParser {
                 break;
         }
     }
-
     private void skipLineComment() {
         while (peek() != '\n' && !isEOF())
             consume();
     }
-
     private void skipBlockComment() {
         consume(2);
         int nest = 1;
@@ -452,13 +606,13 @@ public class AuroraParser {
     // error reporting and recovery
     private boolean errShebang(AuroraDocument doc) {
         boolean ifErr = false;
-        if (peek() == '#' && expectShebang()){
+        if (peek() == '#' && isShebang()){
             if (hasShebang) {
-                error(ErrorCode.MULTIPLE_SHEBANG);
+                error(ErrorCode.MULTIPLE_SHEBANG, line, col);
                 ifErr = true;
             }
             if(doc.hasStatements()) {
-                error(ErrorCode.SHEBANG_AFTER_STATEMENTS);
+                error(ErrorCode.SHEBANG_AFTER_STATEMENTS, line, col);
                 ifErr = true;
             }
         }
@@ -466,7 +620,7 @@ public class AuroraParser {
         return ifErr;
     }
 
-    private void error(ErrorCode code) {
+    private void error(ErrorCode code, int line, int col) {
         errors.add(new ParseError(line, col, code));
         recover();
     }
@@ -475,12 +629,19 @@ public class AuroraParser {
         while (!isEOF() && peek() != '\n' && peek() != ';')
             consume();
     }
-
     private void recoverToObjectEnd() {
         int depth = 1;
         while (!isEOF() && depth > 0) {
-            if (peek(0) == '{') depth++;
-            if (peek(0) == '}') depth--;
+            if (isOperator(Operator.L_BRACE)) depth++;
+            if (isOperator(Operator.R_BRACE)) depth--;
+            consume();
+        }
+    }
+    private void recoverToArrayEnd() {
+        int depth = 1;
+        while (!isEOF() && depth > 0) {
+            if (isOperator(Operator.L_BRACKET)) depth++;
+            if (isOperator(Operator.R_BRACKET)) depth--;
             consume();
         }
     }
