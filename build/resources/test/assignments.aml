@@ -1,7 +1,0 @@
-// Leading comment
-/* block comment */
-#!aml
-
-debug := false,
-enabled := true
-feature := null
