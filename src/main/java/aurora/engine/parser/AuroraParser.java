@@ -3,7 +3,6 @@ package aurora.engine.parser;
 
 import aurora.engine.utilities.Utils;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.nio.file.*;
 import java.io.IOException;
@@ -28,22 +27,22 @@ public class AuroraParser {
         this.source = source;
     }
 
-    public static ParseResult<AuroraDocument> parse(Path path) {
+    public static ParseResult<Module> parse(Path path) {
         try {
             String content = Files.readString(path);
             Dialect dialect = Dialect.fromFileExtension(
                     Utils.getFileExtension(path));
             AuroraParser parser = new AuroraParser(content);
             /*
-                here's the problem - before we can start getting models, we need to validate the document:
+                here's the problem - before we can start getting models, we need to validate the module:
                 - shebang (optional) but must be first non-ws line if present
                 - if no shebang, we can still proceed, but file extension (.aml or .asl)
                   can be a hint, otherwise we assume #!asl as least restrictive
                 - then we start parsing top-level statement (e.g., assignments, model definitions, etc.)
              */
-            var doc = parser.parseDocument(dialect);
+            var module = parser.parseSource(dialect);
             return parser.errors.isEmpty()
-                    ? ParseResult.success(doc)
+                    ? ParseResult.success(module)
                     : ParseResult.failure(parser.errors);
         } catch (IOException e) {
             return ParseResult.failure(List.of(
@@ -64,23 +63,23 @@ public class AuroraParser {
         - **Full control at caller level**
         - **Extensible parsing strategies**
      */
-    private AuroraDocument parseDocument(Dialect hint) {
+    private Module parseSource(Dialect hint) {
         /*
              Let 'parseDocument' handle line states, navigation, error reporting, etc.
              Specialized functions should not modify the parser state directly; they should
              only return results that 'parseDocument' can use to update the state accordingly.
          */
-        var doc = new AuroraDocument();
+        var module = new Module();
         // 1. skip any leading whitespace/comments
         skipWhitespace();
         // 2. shebang; optional, first non-ws line
-        doc.dialect = detectDialect(hint);
+        module.dialect = detectDialect(hint);
 
         // 3. Parse top-level statements
         while (!isEOF()) {
             skipWhitespace();
             // check for shebang again (error if found)
-            if(errShebang(doc)) {
+            if(errShebang(module)) {
                 // error reported inside errShebang
                 recover();
                 continue;
@@ -95,12 +94,12 @@ public class AuroraParser {
                     continue;
                 }
                 // for now, we just create a placeholder statement
-                doc.addIdentifier(id);
+                module.addIdentifier(id);
                 // after statement, expect line ending (, or EOL or EOF)
                 skipWhitespace();
                 Statement stmt;
                 if((stmt = parseStatement(id)) != null) {
-                    doc.addStatement(stmt);
+                    module.addStatement(stmt);
                 } else {
                     // error reported inside parseStatement
                     recover();
@@ -114,8 +113,8 @@ public class AuroraParser {
             recover();
         }
 
-        doc.isParsed = true;
-        return doc;
+        module.isParsed = true;
+        return module;
     }
 
     private Dialect detectDialect(Dialect hint) {
@@ -604,14 +603,14 @@ public class AuroraParser {
     }
 
     // error reporting and recovery
-    private boolean errShebang(AuroraDocument doc) {
+    private boolean errShebang(Module module) {
         boolean ifErr = false;
         if (peek() == '#' && isShebang()){
             if (hasShebang) {
                 error(ErrorCode.MULTIPLE_SHEBANG, line, col);
                 ifErr = true;
             }
-            if(doc.hasStatements()) {
+            if(module.hasStatements()) {
                 error(ErrorCode.SHEBANG_AFTER_STATEMENTS, line, col);
                 ifErr = true;
             }

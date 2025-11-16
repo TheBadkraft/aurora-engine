@@ -2,7 +2,7 @@
 package aurora.engine;
 
 import aurora.engine.parser.AuroraParser;
-import aurora.engine.parser.AuroraDocument;
+import aurora.engine.parser.Module;
 import aurora.engine.parser.aml.NamedModel;
 import aurora.engine.parser.aml.Model;
 import aurora.engine.parser.ParseResult;
@@ -32,7 +32,7 @@ public final class AuroraEngine {
             stream.filter(p -> p.toString().endsWith(".aml"))
                     .forEach(path -> {
                         System.out.println("Loading: " + path);
-                        ParseResult<AuroraDocument> result = AuroraParser.parse(path);
+                        ParseResult<Module> result = AuroraParser.parse(path);
                         if (!result.errors().isEmpty()) {
                             System.out.println("  Failed:");
                             result.errors().forEach(

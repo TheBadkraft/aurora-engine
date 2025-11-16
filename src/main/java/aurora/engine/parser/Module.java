@@ -3,14 +3,14 @@ package aurora.engine.parser;
 import java.util.ArrayList;
 import java.util.List;
 
-public class AuroraDocument {
+public class Module {
     // can be set internally by the parser
     boolean isParsed = false;
     Dialect dialect = null;
     private final List<Statement> statements = new ArrayList<>();
     private final List<String> fields = new ArrayList<>();
 
-    public AuroraDocument() {
+    public Module() {
 
     }
 

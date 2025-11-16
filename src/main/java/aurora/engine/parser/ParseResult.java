@@ -23,7 +23,7 @@ public record ParseResult<T>(
     @Override
     public @NotNull String toString() {
         if (isSuccess()) {
-            return "ParseResult[success=" + result + "]";
+            return "ParseResult[success]";
         } else {
             return "ParseResult[failure=" + errors + "]";
         }

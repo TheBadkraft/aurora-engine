@@ -25,63 +25,62 @@
 
 ### 2.1 Syntax
 
-```aml
-#!aurora aml
+```aurora
+#!aml
 
-<named_object> @[attributes] {
-    key := value;
-    child {
-        ...
-    }
-}
+<identifier> @[attributes] := value}
 ```
 
-### 2.2 Grammar
-
+**Grammar**
 ```
-document        → shebang? named_object*
-shebang         → '#!aurora aml' NL
-named_object    → ID '@[' attr_list ']'? '{' statement* '}'
-statement       → key ':=' value | named_object
-value           → literal | array | object | range | embed
+document        → shebang? statement*
+statement       → ID ':=' value (',' | NL)
+shebang         → '#!aml' NL
+object          → ID '@[' attr_list ']'? ':=' '{' statement* '}'
+array           → ID '@[' attr_list ']'? ':=' '{' value* '}'
+embed           → ID ':=' '@'ATTR`free form embedded \escaped`
+value           → literal | array | object | embed
 ```
 
 ### 2.3 Literals
 
-| Type | Syntax | Example |
-|------|--------|---------|
-| String | `"..."` or `'...'` | `"iron"` |
-| Number | `[-]digits[.digits]` | `50.0`, `-10` |
-| Boolean | `true` / `false` | `true` |
-| Null | `null` | `null` |
-| Hex | `#rrggbb` | `#ffaa00` |
-| Range | `min..max` | `1..4` |
-| Array | `[v1, v2, ...]` | `[wood, stone]` |
-| Object | `{k := v, ...}` | `{x := 1, y := 2}` |
-| Embed | `` `...` `` | `` `raw text` `` |
+| Type    | Syntax                  | Example                   |
+|---------|-------------------------|---------------------------|
+| String  | `"..."` or `'...'`      | `"iron"`                  |
+| Number  | `[-]digits[.digits]`    | `50.0`, `-10`             |
+| Boolean | `true` / `false`        | `true`                    |
+| Null    | `null`                  | `null`                    |
+| Hex     | `#rrggbb`               | `#ffaa00`                 |
+| Array   | `[v1, v2, ...]`         | `[wood, stone]`           |
+| Object  | `{k := v, ...}`         | `{x := 1, y := 2}`        |
+| Embed   | `` `...` ``             | `` @md`**raw text**` ``   |      
 
 ### 2.4 Attributes
 
 ```aml
-@[type=block, mod=vanilla]
+@[type=block, mod=vanilla, method, debug=true]
 ```
 
+Attributes are optional and valid only on **`object`** and **`array`**. Embedded text may have a single attribute (`` @attr`embedded` ``).
+
+
 - Key-value pairs inside `@[...]`
-- `type` is **required** for registry
-- Default: `@[type=unknown]`
+- Single attribute tag preceding `embedded text`
+
+The parser does not attach any function or value to attributes. It is simply metadata attached to the statement itself. The consuming client will be able to interrogate modules and discover all fields, values, and attached attributes.
 
 ### 2.5 Example: Block Definition
 
 ```aml
-super_block @[type=block] {
-    material := metal;
+super_ore_block @[type=block] := {
+    material := stone;
     hardness := 50.0;
-    drop := super_ingot 1..4;
+    drop := super_ore;
     harvest_tool := pickaxe;
     harvest_level := 4;
     sounds := {
-        break := "block.metal.break";
-        place := "block.metal.place";
+        break := "block.stone.break";
+        place := "block.stone.place";
     };
 }
 ```
@@ -89,9 +88,9 @@ super_block @[type=block] {
 **Output Model**:
 ```java
 Model(
-  fullId = "main:super_block",
+  fullId = "main:super_ore_block",
   attributes = {block=Attribute(type=block)},
-  fields = {material=metal, hardness=50.0, drop=Range[1,4], ...},
+  fields = {material=stone, hardness=50.0, drop=1, ...},
   children = []
 )
 ```
@@ -102,30 +101,32 @@ Model(
 
 > **Purpose:** Define **behavior** (functions, events, AI, logic)
 
+**ASL** here is incomplete. We will design on an as needed basis to ensure only what is needed will be implemented and, therefore, will not break existing features. If any of the following on **ASL** seems contradictory, incomplete, or broken, rest assured, this is just a white board for ideas, intent, and value.
+
 ### 3.1 Syntax (MVP)
 
 ```asl
 #!aurora asl
 
-on block_break(event) {
+block_break @[event] := (event) -> {
     drop(super_ingot, rand(1..4));
     play_sound("block.metal.break", event.pos);
 }
 
-on player_interact(block) {
+player_interact @[event] := (block) -> {
     if block.id == "main:super_block" {
         give(player, super_ingot, 1);
     }
 }
 ```
 
-### 3.2 Grammar (Planned)
+### 3.2 Grammar
 
 ```
 script          → shebang? function*
-function        → 'on' event '(' params ')' '{' stmt* '}'
-stmt            → expr ';' | if | loop | return
-expr            → call | literal | path | op
+function        → event @[attr]  '(' params ')' '{' statement* '}'
+statement       → expr ';' | if | loop | return
+expr            → call | literal | path | op | AML
 ```
 
 ### 3.3 Built-in Functions (MVP)
@@ -144,12 +145,15 @@ expr            → call | literal | path | op
 
 | Extension | Dialect | Shebang |
 |---------|--------|--------|
-| `.aml` | AML | `# !aurora aml` |
-| `.asl` | ASL | `# !aurora asl` |
+| `.aml` | AML | `# !aml` |
+| `.asl` | ASL | `# !asl` |
+
+**NOTE**: The shebang tells the parser (**AuroraEngine**) what dialect to expect. AML is the more restrictive dialect and a subset of ASL. While an _Aurora_ file can have any extension, if a shebang is not included, the parser will use the extension as a hint. If the file extension does not provide a valid hint, the dialect will be defaulted to ASL, the least restrictive.
 
 ---
 
 ## 5. Runtime Model
+**Needs to be updated**
 
 ```java
 // AML → Model
@@ -162,56 +166,21 @@ onBreak.invoke(event);
 
 ---
 
-## 6. Hot-Reload Registry
-
-```java
-Registry registry = new Registry();
-registry.watch("data/aurora/", (file) -> {
-    if (file.endsWith(".aml")) {
-        registry.register(AmlParser.parse(file));
-    }
-});
-```
+## 6. Function Registry
+**To be determined**
 
 ---
 
 ## 7. Roadmap
 
 | Milestone | Features |
-|---------|----------|
-| **0.1** | AML parser, basic model, hot-reload |
-| **0.2** | ASL MVP, function calls |
-| **0.3** | Registry, events, mod interop |
-| **1.0** | Full ASL, JIT, VS Code LSP |
+|---------|------------------|
+| **0.1** | AML parser, basic model |
+| **0.2** | Model attributes |
+| **0.3** | `vars` & interpolation |
+| **0.4** | Inheritance |
+| **0.5** | ASL, type table |
+| **0.6** | Module composition |
+| **0.7** | Function Registry |
+| **1.0** | Release Candidate |
 
----
-
-## 8. Example Project Structure
-
-```
-data/aurora/
-├── blocks/
-│   ├── super_block.aml
-│   └── portal.aml
-├── items/
-│   └── super_ingot.aml
-└── scripts/
-    └── events.asl
-```
-
----
-
-**You now have the full language spec.**  
-**No Gradle. No noise.**  
-**Pure Aurora.**
-
----
-
-> **Your move:**
-> ```plain:disable-run
-> Language spec received.
-> Ready for ASL parser or FunctionRegistry.
-> ```
-
-Let’s build it.
-```
