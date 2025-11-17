@@ -9,12 +9,14 @@ public class Module {
     // can be set internally by the parser
     boolean isParsed = false;
     Dialect dialect = null;
+    private final String namespace;
     private final List<Statement> statements = new ArrayList<>();
     private final List<String> fields = new ArrayList<>();
 
-    public Module() {
-
+    public Module(String namespace) {
+        this.namespace = namespace;
     }
+    public String namespace() { return namespace; }
 
     /*
         Returns true if the document contains no content.
