@@ -13,6 +13,8 @@ public record Assignment(String key, List<Attribute> attributes, Value value) im
         this(key, List.copyOf(attributes), value);
     }
 
+    public String identifier() { return key; }
+
     @Override
     public List<Attribute> attributes() {
         return attributes;

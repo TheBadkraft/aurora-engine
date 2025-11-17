@@ -1,8 +1,0 @@
-#!aml
-
-// valid anonymous object
-user := {
-    name := "badkraft"
-    id := 42
-    active := true
-}

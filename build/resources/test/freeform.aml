@@ -1,8 +1,0 @@
-#!aml
-
-info := @md`#### Freeform Text
-This is a markdown snippet with:
-- **bold text**
-- _italic text_
-- [link](https://example.com)
-`

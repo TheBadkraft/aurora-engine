@@ -16,6 +16,7 @@ public class AuroraParser {
             "true", "false", "null", "vars", "include"
             // "return", "if", "else", "for", "while" // reserved for future use
     );
+    private final String namespace;
     private final String source;
     private final List<ParseError> errors = new ArrayList<>();
     private boolean hasShebang = false;
@@ -23,7 +24,8 @@ public class AuroraParser {
     private int line = 1;
     private int col = 1;
 
-    private AuroraParser(String source) {
+    private AuroraParser(String namespace, String source) {
+        this.namespace = namespace;
         this.source = source;
     }
 
@@ -32,7 +34,10 @@ public class AuroraParser {
             String content = Files.readString(path);
             Dialect dialect = Dialect.fromFileExtension(
                     Utils.getFileExtension(path));
-            AuroraParser parser = new AuroraParser(content);
+            String name = path.getFileName()
+                    .toString()
+                    .replaceFirst("[.][^.]+$", "");
+            AuroraParser parser = new AuroraParser(name, content);
             /*
                 here's the problem - before we can start getting models, we need to validate the module:
                 - shebang (optional) but must be first non-ws line if present
@@ -69,7 +74,7 @@ public class AuroraParser {
              Specialized functions should not modify the parser state directly; they should
              only return results that 'parseDocument' can use to update the state accordingly.
          */
-        var module = new Module();
+        var module = new Module(namespace);
         // 1. skip any leading whitespace/comments
         skipWhitespace();
         // 2. shebang; optional, first non-ws line
@@ -125,11 +130,19 @@ public class AuroraParser {
                     recover();
                     continue;
                 }
-
+                if (isOperator(Operator.R_BRACE)) {
+                    // we're done with this object block — just eat the brace
+                    consumeOperator(Operator.R_BRACE);
+                    skipWhitespace();
+                }
+                if(isOperator(Operator.COMMA)) {
+                    consumeOperator(Operator.COMMA);
+                }
                 // Build the final statement with attributes
                 Statement stmt = new Assignment(id, valueRes.value(), attrs);
                 module.addStatement(stmt);
 
+                skipWhitespace();
                 continue;
             }
 
@@ -153,30 +166,6 @@ public class AuroraParser {
         return hint;
     }
 
-//    private Statement parseStatement(String id) {
-//        // 1. try assignment operator
-//        if(isOperator(Operator.ASSIGN)) {
-//            if(!consume(Operator.ASSIGN.symbol().length()).isEmpty()) {
-//                skipWhitespace();
-//                // we have an assignment operator so we parse value ...
-//                var value = parseValue();
-//
-//                if (value.isSuccess()) {
-//                    return new Assignment(id, value.value());
-//                } else {
-//                    // error reported inside value result
-//                    errors.addAll(value.errors());
-//                    recover();
-//                    return null;
-//                }
-//            }
-//        }
-//
-//        // no assignment operator
-//        error(ErrorCode.EXPECTED_ASSIGN, line, col);
-//        return null;
-//    }
-    
     private ValueParseResult<List<Attribute>> parseAttributeBlock() {
         if (!isOperator(Operator.L_BRACKET)) return success(List.of());
         int startLine = line, startCol = col;
@@ -215,7 +204,7 @@ public class AuroraParser {
     private @NotNull ValueParseResult<Value> parseValue() {
         // object type
         if (isOperator(Operator.L_BRACE)) {
-            return parseAnonymousObject();
+            return parseObject();
         }
         // array type
         if (isOperator(Operator.L_BRACKET)) {
@@ -237,15 +226,6 @@ public class AuroraParser {
             consume(5);
             return success((new Value.BooleanValue(false)));
         }
-        // ---- anonymous identifier (e.g. block, vanilla) ----
-        int idLen = isIdentifier();
-        if (idLen > 0) {
-            String id = consume(idLen);
-            if (!isKeyword(id)) {
-                return ValueParseResult.success(new Value.AnonymousValue(id));
-            }
-            // fall through to keyword handling (true/false/null)
-        }
         // string & numeric types
         if (isOperator(Operator.QUOTE)) {
             consumeOperator(Operator.QUOTE);
@@ -256,30 +236,45 @@ public class AuroraParser {
             } else {
                 return failure(ErrorCode.UNTERMINATED_STRING, line, col);
             }
+        }
+        // ---- TRY NUMBER (non-destructive) ----
+        int savedPos = pos;
+        int savedLine = line;
+        int savedCol = col;
+        NumericParseResult numRes = parseNumber();
+        if (numRes.isSuccess()) {
+            return success(numRes.value());
         } else {
-            NumericParseResult numeric = parseNumber();
-            if (numeric.isSuccess()) {
-                return ValueParseResult.success(numeric.value());
-            } else if (!numeric.errors().isEmpty()) {
-                return ValueParseResult.failure(numeric.errors());
+            // rollback
+            pos = savedPos;
+            line = savedLine;
+            col = savedCol;
+        }
+        // ---- BARE IDENTIFIER (fallback) ----
+        int litLen = isBareLiteral();
+        if (litLen > 0) {
+            String id = consume(litLen);
+            if (!isKeyword(id)) {
+                return success(new Value.BareLiteral(id));
             }
+            // if it's a keyword, fall through to error
         }
 
-        return failure(ErrorCode.EXPECTED_VALUE, line, col);
+        return failure(ErrorCode.UNEXPECTED_TOKEN, line, col);
     }
 
     private ValueParseResult<Value> parseLiteral() {
         var vp = parseValue();
         if (!vp.isSuccess()) return vp;
-        
+
         Value v = vp.value();
         if (v instanceof Value.ObjectValue || v instanceof Value.ArrayValue) {
             return ValueParseResult.failure(ErrorCode.INVALID_VALUE_IN_ATTRIBUTE, line, col);
         }
-        
+
         return vp;
     }
-    
+
     private NumericParseResult parseNumber() {
         int start = pos;
         int startLine = line, startCol = col;
@@ -325,8 +320,8 @@ public class AuroraParser {
         }
     }
 
-    private @NotNull ValueParseResult<Value> parseAnonymousObject() {
-        Map<String, Value> fields = new HashMap<>();
+    private @NotNull ValueParseResult<Value> parseObject() {
+        List<Map.Entry<String, Value>> fields = new ArrayList<>();
         List<ParseError> errors = new ArrayList<>();
         int start = pos;
         boolean loop = !isOperator(Operator.R_BRACE);
@@ -365,10 +360,10 @@ public class AuroraParser {
                 break;
             }
             // 4. Check for duplicate field
-            if (fields.containsKey(field)) {
+            if (fields.contains(field)) {
                 errors.add(new ParseError(line, col, ErrorCode.DUPLICATE_FIELD_IN_OBJECT));
             } else {
-                fields.put(field, valueResult.value());
+                fields.add(Map.entry(field, valueResult.value()));
             }
             // 5. Separator (, or \n) or end block
             if (isOperator(Operator.COMMA)) {
@@ -393,7 +388,7 @@ public class AuroraParser {
 
         String sourceText = source.substring(start, pos);
         return errors.isEmpty()
-                ? ValueParseResult.success(new Value.ObjectValue(Map.copyOf(fields), sourceText))
+                ? ValueParseResult.success(new Value.ObjectValue(fields, sourceText))
                 : ValueParseResult.failure(errors);
     }
 
@@ -508,6 +503,35 @@ public class AuroraParser {
     private static boolean isHexDigit(char c) {
         return isDigit(c) || (c >= 'a' && c <= 'f')
                 || (c >= 'A' && c <= 'F');
+    }
+    /**
+     * Checks for a bare literal (identifier-style value) at the current position.
+     * Allowed:
+     *   - Starts with letter or '_'
+     *   - Contains letters, digits, '_', and '.'
+     * Does NOT advance the cursor — just returns length (like isIdentifier())
+     */
+    private int isBareLiteral() {
+        int length = 0;
+
+        // Must start with letter or '_'
+        char first = peek(length);
+        if (!Character.isLetter(first) && first != '_') {
+            return 0;
+        }
+        length++;
+
+        // Subsequent chars: letters, digits, '_', or '.'
+        while (true) {
+            char c = peek(length);
+            if (c == '\0') break;
+            if (!Character.isLetterOrDigit(c) && c != '_' && c != '.') {
+                break;
+            }
+            length++;
+        }
+
+        return length;
     }
 
     private char consume() {

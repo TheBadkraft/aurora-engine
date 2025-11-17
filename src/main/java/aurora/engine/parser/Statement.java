@@ -9,4 +9,6 @@ import java.util.List;
 public sealed interface Statement permits Assignment {
     /** Immutable attribues attached to this statement. */
     List<Attribute> attributes();
+    String identifier();
+    Value value();
 }
