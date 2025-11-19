@@ -2,7 +2,8 @@ package dev.badkraft.aurora.engine.parser;
 
 public enum Dialect {
     ASL(0, "asl"),
-    AML(1, "aml");
+    AML(1, "aml"),
+    NONE(-1, "nil"),;
 
     private final int code;
     private final String name;
@@ -26,7 +27,8 @@ public enum Dialect {
         return switch (fileExtension) {
             case "asl" -> ASL;
             case "aml" -> AML;
-            default -> throw new IllegalArgumentException("Unsupported file extension: " + fileExtension);
+            // let's return NONE for unsupported extensions, let the caller handle it
+            default -> NONE;
         };
     }
 

@@ -8,13 +8,14 @@ import java.util.Set;
 public class Module {
     // can be set internally by the parser
     boolean isParsed = false;
-    Dialect dialect = null;
+    Dialect dialect = Dialect.NONE;
     private final String namespace;
     private final List<Statement> statements = new ArrayList<>();
-    private final List<String> fields = new ArrayList<>();
+    private final List<String> identifiers = new ArrayList<>();
 
-    public Module(String namespace) {
+    public Module(String namespace, Dialect dialect) {
         this.namespace = namespace;
+        this.dialect = dialect;
     }
     public String namespace() { return namespace; }
 
@@ -52,7 +53,7 @@ public class Module {
         Returns an unmodifiable list of fields defined in the document.
      */
     public List<String> fields() {
-        return List.copyOf(fields);
+        return List.copyOf(identifiers);
     }
     /*
         Returns true if the document has any statements.
@@ -67,7 +68,7 @@ public class Module {
      */
     public boolean isValid() {
         Set<String> topLevel = new HashSet<>();
-        for (String field : fields) {
+        for (String field : identifiers) {
             if (!topLevel.add(field)) return false;
         }
         return statements.stream()
@@ -83,8 +84,8 @@ public class Module {
     /*
         Internal method to add an identifier to the document.
      */
-    void addIdentifier(String field) {
-        fields.add(field);
+    void addIdentifiers(List<String> identifiers) {
+        this.identifiers.addAll(identifiers);
     }
 
     private boolean isValidValue(Value v) {

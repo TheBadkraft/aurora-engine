@@ -90,7 +90,7 @@ public class FileTest {
 
         Module module = r.module;
         System.out.printf("PASS — %.3f ms%n", r.parseTime);
-        System.out.println("Module [" + module.namespace() + "] dialect: " + module.getDialect());
+        System.out.println("Module [" + module.namespace() + "] \n   dialect: " + module.getDialect());
         System.out.println();
 
         if (module.hasStatements()) {
