@@ -1,5 +1,5 @@
-// aurora-engine/build.gradle.kts
-version = "0.1.0"   // ← YES! This is what adds the version
+// anvil-engine/build.gradle.kts
+version = "0.1.2"   // ← YES! This is what adds the version
 
 plugins {
     java
@@ -21,7 +21,7 @@ dependencies {
 }
 
 application {
-    mainClass.set("dev.badkraft.aurora.engine.AuroraEngine")
+    mainClass.set("dev.badkraft.anvil.engine.AuroraEngine")
 }
 
 tasks.test {

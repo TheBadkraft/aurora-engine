@@ -1,4 +1,4 @@
-package dev.badkraft.aurora.engine.utilities;
+package dev.badkraft.anvil.utilities;
 
 import java.nio.file.Path;
 

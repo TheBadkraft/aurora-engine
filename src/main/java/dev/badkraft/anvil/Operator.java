@@ -1,4 +1,4 @@
-package dev.badkraft.aurora.engine.parser;
+package dev.badkraft.anvil;
 
 // We need to separate actual operators from symbols
 public enum Operator {

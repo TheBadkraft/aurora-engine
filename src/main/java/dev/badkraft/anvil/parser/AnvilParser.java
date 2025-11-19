@@ -1,17 +1,18 @@
 // src/main/java/dev/badkraft/aurora/engine/parser/AuroraParser.java
-package dev.badkraft.aurora.engine.parser;
+package dev.badkraft.anvil.parser;
 
-import dev.badkraft.aurora.engine.utilities.Utils;
+import dev.badkraft.anvil.*;
+import dev.badkraft.anvil.Module;
+import dev.badkraft.anvil.utilities.Utils;
 import org.jetbrains.annotations.NotNull;
 
 import java.nio.file.*;
 import java.io.IOException;
 import java.util.*;
 
-import static dev.badkraft.aurora.engine.parser.ValueParseResult.failure;
-import static dev.badkraft.aurora.engine.parser.ValueParseResult.success;
+import static dev.badkraft.anvil.ValueParseResult.failure;
 
-public class AuroraParser {
+public class AnvilParser {
     public static final Set<String> KEYWORDS = Set.of(
             "true", "false", "null", "vars", "include"
     );
@@ -26,7 +27,7 @@ public class AuroraParser {
     /**
      * Construct a new AuroraParser
      */
-    private AuroraParser(Dialect hintDialect, String namespace, String source) {
+    private AnvilParser(Dialect hintDialect, String namespace, String source) {
         this.source = source;
         this.moduleDialect = parseDialect(hintDialect);
     }
@@ -34,13 +35,13 @@ public class AuroraParser {
     /**
      * Parser entry
      */
-    public static ParseResult<Module> parse(Path path) {
+    public static ParseResult<dev.badkraft.anvil.Module> parse(Path path) {
         try {
             String content = Files.readString(path);
             Dialect hintDialect = Dialect.fromFileExtension(Utils.getFileExtension(path));
             String name = path.getFileName().toString().replaceFirst("[.][^.]+$", "");
-            AuroraParser parser = new AuroraParser(hintDialect, name, content);
-            Module module = new Module(name, parser.moduleDialect);
+            AnvilParser parser = new AnvilParser(hintDialect, name, content);
+            dev.badkraft.anvil.Module module = new dev.badkraft.anvil.Module(name, parser.moduleDialect);
             parser.parseSource(module);
 
             return parser.errors.isEmpty()
@@ -70,7 +71,7 @@ public class AuroraParser {
             List<String> identifiers = new ArrayList<>();
             Statement statement = parseStatement(identifiers);
             module.addStatement(statement);
-            module.addIdentifiers(identifiers);
+            module.addAllIdentifiers(identifiers);
         }
     }
     private Statement parseStatement(List<String> identifiers) {

@@ -1,5 +1,5 @@
 // src/main/java/dev/badkraft/engine/parser/ErrorCode.java
-package dev.badkraft.aurora.engine.parser;
+package dev.badkraft.anvil;
 
 public enum ErrorCode {
     // LEXER / SCANNER (100x)

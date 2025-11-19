@@ -1,13 +1,13 @@
-// src/main/java/dev/badkraft/engine/AuroraEngine.java
-package dev.badkraft.aurora.engine;
+// src/main/java/dev/badkraft/anvil/engine/AuroraEngine.java
+package dev.badkraft.anvil.engine;
 
-import dev.badkraft.aurora.engine.parser.AuroraParser;
-import dev.badkraft.aurora.engine.parser.Module;
-import dev.badkraft.aurora.engine.parser.ParseResult;
+import dev.badkraft.anvil.parser.AnvilParser;
+import dev.badkraft.anvil.Module;
+import dev.badkraft.anvil.ParseResult;
 
 import java.nio.file.*;
 
-public final class AuroraEngine {
+public final class AnvilEngine {
     private static final Path DATA_ROOT = Path.of("data/aurora");
 
     public static void main(String[] args) {
@@ -29,7 +29,7 @@ public final class AuroraEngine {
             stream.filter(p -> p.toString().endsWith(".aml"))
                     .forEach(path -> {
                         System.out.println("Loading: " + path);
-                        ParseResult<Module> result = AuroraParser.parse(path);
+                        ParseResult<Module> result = AnvilParser.parse(path);
                         if (!result.errors().isEmpty()) {
                             System.out.println("  Failed:");
                             result.errors().forEach(

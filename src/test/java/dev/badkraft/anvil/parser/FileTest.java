@@ -1,5 +1,8 @@
-// src/test/java/dev/badkraft/aurora/engine/parser/FileTest.java
-package dev.badkraft.aurora.engine.parser;
+// src/test/java/dev/badkraft/aurora/parser/FileTest.java
+package dev.badkraft.anvil.parser;
+
+import dev.badkraft.anvil.*;
+import dev.badkraft.anvil.Module;
 
 import java.io.IOException;
 import java.nio.file.*;
@@ -70,11 +73,11 @@ public class FileTest {
         System.out.println("=== " + fileName + " ===");
 
         long start = System.nanoTime();
-        ParseResult<?> result = AuroraParser.parse(path);
+        ParseResult<?> result = AnvilParser.parse(path);
         long parseTime = (System.nanoTime() - start) / 1_000_000;
 
         boolean success = result.isSuccess() && result.errors().isEmpty();
-        var module = success ? (Module) result.result() : null;
+        var module = success ? (dev.badkraft.anvil.Module) result.result() : null;
 
         return new TestResult(fileName, path, module, result.errors(), parseTime, success);
     }
@@ -88,12 +91,12 @@ public class FileTest {
             return;
         }
 
-        Module module = r.module;
+        dev.badkraft.anvil.Module module = r.module;
         System.out.printf("PASS — %.3f ms%n", r.parseTime);
-        System.out.println("Module [" + module.namespace() + "] \n   dialect: " + module.getDialect());
+        System.out.println("Module [" + module.namespace() + "] \n   dialect: " + module.dialect());
         System.out.println();
 
-        if (module.hasStatements()) {
+        if (!module.statements().isEmpty()) {
             System.out.println("Statements:");
             for (Statement stmt : module.statements()) {
                 System.out.println(prettyPrintStatement(stmt, 1));

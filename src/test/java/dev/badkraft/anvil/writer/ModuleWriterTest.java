@@ -1,10 +1,10 @@
 // src/test/java/aurora/engine/writer/ModuleWriterTest.java
-package dev.badkraft.aurora.engine.writer;
+package dev.badkraft.anvil.writer;
 
-import dev.badkraft.aurora.engine.parser.AuroraParser;
-import dev.badkraft.aurora.engine.parser.Module;
-import dev.badkraft.aurora.engine.parser.ParseResult;
-import dev.badkraft.aurora.engine.writer.ModuleWriter;
+import dev.badkraft.anvil.parser.AnvilParser;
+import dev.badkraft.anvil.Module;
+import dev.badkraft.anvil.ParseResult;
+import dev.badkraft.anvil.writer.ModuleWriter;
 
 import java.nio.file.*;
 import java.io.IOException;
@@ -23,7 +23,7 @@ public class ModuleWriterTest {
         System.out.println("=== ModuleWriter Round-Trip Test ===");
         System.out.println("Input: " + path);
 
-        ParseResult<Module> result = AuroraParser.parse(path);
+        ParseResult<Module> result = AnvilParser.parse(path);
 
         if (!result.isSuccess()) {
             System.err.println("Parse failed:");

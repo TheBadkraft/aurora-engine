@@ -1,9 +1,8 @@
 // src/main/java/dev/badkraft/engine/writer/ModuleWriter.java
-package dev.badkraft.aurora.engine.writer;
+package dev.badkraft.anvil.writer;
 
-import dev.badkraft.aurora.engine.parser.*;
-import dev.badkraft.aurora.engine.parser.*;
-import dev.badkraft.aurora.engine.parser.Module;
+import dev.badkraft.anvil.*;
+import dev.badkraft.anvil.Module;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -22,8 +21,8 @@ public final class ModuleWriter {
             throw new IllegalStateException("Cannot write invalid module");
         }
 
-        if (module.getDialect() != null) {
-            sb.append("#!").append(module.getDialect().name().toLowerCase()).append('\n');
+        if (module.dialect() != Dialect.NONE) {
+            sb.append("#!").append(module.dialect().name().toLowerCase()).append('\n');
             if (isPretty) sb.append('\n');
         }
 

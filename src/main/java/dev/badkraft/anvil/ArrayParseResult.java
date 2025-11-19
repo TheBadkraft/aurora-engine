@@ -1,5 +1,5 @@
 // src/main/java/dev/badkraft/engine/parser/ArrayParseResult.java
-package dev.badkraft.aurora.engine.parser;
+package dev.badkraft.anvil;
 
 import java.util.List;
 

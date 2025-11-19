@@ -1,5 +1,5 @@
 // src/main/java/dev/badkraft/engine/parser/Value.java
-package dev.badkraft.aurora.engine.parser;
+package dev.badkraft.anvil;
 
 import org.jetbrains.annotations.NotNull;
 

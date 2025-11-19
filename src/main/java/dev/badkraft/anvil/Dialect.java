@@ -1,4 +1,4 @@
-package dev.badkraft.aurora.engine.parser;
+package dev.badkraft.anvil;
 
 public enum Dialect {
     ASL(0, "asl"),

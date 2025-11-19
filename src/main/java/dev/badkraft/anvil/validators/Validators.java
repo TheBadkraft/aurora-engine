@@ -1,4 +1,4 @@
-package dev.badkraft.aurora.engine.validators;
+package dev.badkraft.anvil.validators;
 
 public class Validators {
     public static ValidationResult validateFilePath(String path) {
