@@ -8,10 +8,13 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-public sealed interface Value
-        permits Value.NullValue, Value.BooleanValue, Value.NumberValue,
-        Value.StringValue, Value.ArrayValue, Value.ObjectValue,
-        Value.BlobValue, Value.BareLiteral, Value.TupleValue {
+public sealed interface Value permits
+        Value.NullValue, Value.BooleanValue,
+        Value.LongValue, Value.DoubleValue,
+        Value.HexValue, Value.StringValue,
+        Value.ArrayValue, Value.ObjectValue,
+        Value.BlobValue, Value.BareLiteral,
+        Value.TupleValue {
 
     @Override String toString();
 
@@ -24,10 +27,22 @@ public sealed interface Value
         @Override
         public @NotNull String toString() { return Boolean.toString(value); }
     }
-    record NumberValue(double value, String source) implements Value {
-        public NumberValue(double value) { this(value, null); }
-        @Override public @NotNull String toString() {
+    record LongValue(long value, String source) implements Value {
+        public LongValue(long value) { this(value, null); }
+        @Override public String toString() {
+            return source != null ? source : Long.toString(value);
+        }
+    }
+    record DoubleValue(double value, String source) implements Value {
+        public DoubleValue(double value) { this(value, null); }
+        @Override public String toString() {
             return source != null ? source : Double.toString(value);
+        }
+    }
+    record HexValue(long value, String source) implements Value {
+        public HexValue(long value) { this(value, null); }
+        @Override public String toString() {
+            return source != null ? source : "0x" + Long.toHexString(value).toUpperCase();
         }
     }
     record StringValue(String value) implements Value {  // ← renamed from getValue

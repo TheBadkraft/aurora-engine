@@ -146,7 +146,9 @@ public class FileTest {
         return switch (value) {
             case Value.NullValue ignored -> "null";
             case Value.BooleanValue b -> Boolean.toString(b.value());
-            case Value.NumberValue n  -> n.source() != null ? n.source() : Double.toString(n.value());
+            case Value.HexValue n  -> n.source() != null ? n.source() : Long.toString(n.value());
+            case Value.LongValue n -> n.source() != null ? n.source() : Long.toString(n.value());
+            case Value.DoubleValue d -> d.source() != null ? d.source() : Double.toString(d.value());
             case Value.StringValue s  -> "\"" + s.value()
                     .replace("\\", "\\\\")
                     .replace("\"", "\\\"")

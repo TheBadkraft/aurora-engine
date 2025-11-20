@@ -5,11 +5,13 @@ public enum ErrorCode {
     // LEXER / SCANNER (100x)
     UNEXPECTED_CHAR(1001, "Unexpected character"),
     UNTERMINATED_STRING(1002, "Unterminated string literal"),
-    IO_ERROR(1003, "I/O error during file reading"),
-    EXPECTED_BACKTICK(1004, "Expected freeform literal enclosure"),
-    UNTERMINATED_FREEFORM(1005, "Unterminated freeform literal"),
-    INVALID_NUMBER(1006, "Invalid number format"),
-    INVALID_EXPONENT(1007, "Invalid exponent format"),
+    UNTERMINATED_BLOB(1003, "Unterminated blob literal"),
+    IO_ERROR(1004, "I/O error during file reading"),
+    EXPECTED_BACKTICK(1005, "Expected freeform literal enclosure"),
+    UNTERMINATED_FREEFORM(1006, "Unterminated freeform literal"),
+    INVALID_HEX_LITERAL(1007, "Invalid hex number format"),
+    INVALID_EXPONENT(1008, "Invalid exponent format"),
+    INVALID_NUMBER(1009, "Invalid number format"),
 
     // PARSER - TOP LEVEL (200x)
     EXPECTED_IDENTIFIER(2001, "Expected identifier"),
@@ -41,7 +43,7 @@ public enum ErrorCode {
     EMPTY_TUPLE_ELEMENT(4007, "Missing element in tuple"),
     ROCKET_OP_NOT_VALID(4008, "Rocket operator '=>' is not valid"),
     ARRAY_CANNOT_BE_EMPTY(4009, "Arrays cannot be empty"),
-    ASSIGNMENT_NOT_ALLOWED_HERE(4010, "Assignment not valid here");
+    ASSIGNMENT_NOT_ALLOWED_HERE(4010, "Assignment not valid here"),;
 
     private final int code;
     private final String message;
