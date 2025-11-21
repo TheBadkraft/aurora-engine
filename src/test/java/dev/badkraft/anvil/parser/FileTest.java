@@ -12,8 +12,15 @@ import java.util.stream.*;
 public class FileTest {
     private static final Path TEST_DIR = Paths.get("build/resources/test");
 
+    private static boolean speedTest = false;
+
     public static void main(String[] args) {
         ensureTestDirectory();
+
+        if (args.length > 0 && args[0].equals("--speed")) {
+            speedTest = true;
+            args = new String[0];
+        }
 
         List<Path> files;
         if (args.length > 0) {
@@ -93,6 +100,9 @@ public class FileTest {
 
         dev.badkraft.anvil.Module module = r.module;
         System.out.printf("PASS — %.3f ms%n", r.parseTime);
+        if(speedTest) {
+            return;
+        }
         System.out.println("Module [" + module.namespace() + "] \n   dialect: " + module.dialect());
         System.out.println();
 
