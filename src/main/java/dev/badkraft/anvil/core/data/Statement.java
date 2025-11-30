@@ -1,4 +1,4 @@
-package dev.badkraft.anvil;
+package dev.badkraft.anvil.core.data;
 
 import java.util.List;
 
@@ -11,4 +11,5 @@ public sealed interface Statement permits Assignment {
     List<Attribute> attributes();
     String identifier();
     Value value();
+    String base();
 }
