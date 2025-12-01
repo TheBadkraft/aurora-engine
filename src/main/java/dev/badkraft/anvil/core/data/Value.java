@@ -20,6 +20,9 @@ public sealed interface Value
                     "Attributes not supported on " + getClass().getSimpleName());
         };
     }
+    default Attribute findAttribute(String key) {
+        return getAttributes().find(key).orElse(null);
+    }
 
     int start();
     int end();

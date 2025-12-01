@@ -4,6 +4,17 @@
 // Massive Anvil benchmark file — 100% valid syntax
 // Generated at 475672
 
+base_block @[ tier=1, rarity=common ] := {
+    name := "Base Block"
+    type := block
+    hardness := 1.5
+}
+
+derived_block:base_block @[ tier=2, rarity=uncommon ] := {
+    name := "Derived Block"
+    hardness := 2.5
+}
+
 shadow_soul @[ enchantable=true, durability=2643 ] := {
     name := "Prismatic Sun"
     type := shovel
@@ -154,7 +165,10 @@ prismatic_spear := {
 shadow_dagger @[ tier=5, rarity=rare, damage=11.1 ] := {
     name := "Infernal Dark_oak Planks"
     type := leggings
-    damage := 3.9
+    damage @[target=zombie] := {
+        base := 3.9
+        modifier := 1.2
+    }
     durability := 2392
 }
 

@@ -2,6 +2,7 @@
 package dev.badkraft.anvil.api;
 
 import dev.badkraft.anvil.core.data.Attribute;
+import dev.badkraft.anvil.core.data.Value;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -77,11 +78,34 @@ class AnvilTest {
 
     @Test
     void loadFromFile_withRootAttributes() throws IOException {
-        AnvilRoot root = Anvil.load(Paths.get("src/test/resources/attributes.aml"));
+        AnvilRoot root = Anvil.load(Paths.get("src/test/resources/anvil_modded_01.aml"));
 
-        // Root-level attributes — from @[version=0.1, ...]
-        assertTrue(true);
+        //  do we have a root?
+        assertNotNull(root);
+
+        //  let's get some root attributes
+        //  @[mod="anvil_test", version="1.0.0", author="Generated", debug=true, size_target="7KB"]
+        assertTrue(root.hasAttribute("mod"));
+        assertTrue(root.hasAttribute("version"));
+        Attribute modAttr = root.getAttribute("mod");
+        assertNotNull(modAttr);
+        assertEquals("anvil_test", modAttr.value().toString());
     }
 
+    @Test
+    void loadFromFile_withObjectAttributes() throws IOException {
+        AnvilRoot root = Anvil.load(Paths.get("src/test/resources/anvil_modded_01.aml"));
 
+        // let's touch a couple of object attributes
+        assertTrue(root.hasObject("shadow_soul"));
+
+        Value.ObjectValue item = (Value.ObjectValue) root.valueFor("shadow_soul");
+        assertNotNull(item);
+        Attribute enchantable = item.findAttribute("enchantable");
+        Attribute durability = item.findAttribute("durability");
+        assertNotNull(enchantable);
+        assertNotNull(durability);
+        assertTrue(enchantable.getBoolean());
+        assertEquals(2643, durability.getInt());
+    }
 }
