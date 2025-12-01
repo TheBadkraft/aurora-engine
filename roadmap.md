@@ -1,7 +1,7 @@
 # Anvil Formal Roadmap  
 **2025–2026** — The next 12 months of domination
 
-| Version       | Target Release | Status       | Purpose & Deliverables                                                                                                                     | One-Liner Roast                                                                                          |
+| Version       | Target Release | Status       | Purpose & Deliverables                                                                                                                     | Comment                                                                                         |
 |---------------|----------------|--------------|--------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------|
 | **0.1.6**     | Dec 2025       | Released     | Current stable alpha – zero-copy parser, sealed immutable AST, `AnvilRoot` entry point                                                   | “JSON just realized it’s been parsing whitespace wrong for 25 years.”                                   |
 | **0.1.7**     | Jan–Feb 2026   | In Progress  | **The Fluent Runtime Layer**<br>• Lowercase native types: `object`, `array`, `tuple`, `blob`<br>• Core interfaces: `IObject`, `ICollection`, `IContainer`, `IAttributed`<br>• `MutableObject`, `MutableArray`, `ImmutableTuple`<br>• `.build()` → frozen AST path<br>• Full convenience getters on all containers (`getString`, `getLong`, `getObject`, etc.) | “Your config library still uses `Map<String, Object>`? Cute.”                                            |
