@@ -9,8 +9,8 @@
 
 > “JSON is what happens when a programmer hates humans.  
 > YAML is what happens when a human tries to write JSON while drunk.  
-> TOML is what happens when a config file tries to cosplay as INI and fails.  
-> Anvil is what happens when a software engineer gets fed up.” – Badkraft, 2025
+> TOML is what happens when a config file tries to cosplay as INI.  
+> Anvil is what happens when a software engineer decides _gooed enough_ sucks.” – Badkraft, 2025
 
 Anvil is a **zero-copy**, **typeless**, **blazing-fast** modeling language (AML dialect) built in pure Java 21.  
 It parses real-world 6–8 KB modded configs in **~120 µs warm**, with **zero heap allocations** for skipped content.
