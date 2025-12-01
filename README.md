@@ -70,6 +70,11 @@ player := {
 - Immutable sealed hierarchy of `record` types  
 - Thread-safe, allocation-minimal, GC-friendly
 
+> "0.1.5? That was yesterday’s bug. Today we ship awesome-sauce.
+>  ... oh, did we mention AML is minifiable?"
+>
+> ~ Badkraft
+---
 ## Java API (v0.1.6 – Fluent & Minimal)
 
 ```java
@@ -98,11 +103,6 @@ Full type-safe convenience layer (`AnvilObject`, `AnvilArray`, etc.) coming in *
 | 0.1.7     | Fluent wrapper API (`AnvilObject`, etc.)   | In progress (Aurora-MVP) |
 | 0.2.0     | ASL dialect, multi-file modules, vars block| Planned              |
 
-"0.1.5? That was yesterday’s bug. Today we ship awesome-sauce."
-
-> "Did we mention AML is minifiable?"
->
-> ~ Badkraft
 
 ## License
 MIT © 2025 Badkraft & Contributors
