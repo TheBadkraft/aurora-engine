@@ -5,14 +5,14 @@
 [![Version](https://img.shields.io/badge/version-0.1.6--alpha-blue)](#)  
 [![Build](https://img.shields.io/badge/build-passing-brightgreen.svg)](#)
 
-**Anvil** — the data language that finally admits JSON, YAML, and TOML are all embarrassing failures at being readable, fast, or sane.
+**Anvil** — the data language that causes JSON, YAML, and TOML to admit they're embarrassing failures at ... everything - readability, portability, expressiveness, and speed.
 
 > “JSON is what happens when a programmer hates humans.  
 > YAML is what happens when a human tries to write JSON while drunk.  
 > TOML is what happens when a config file tries to cosplay as INI.  
 > Anvil is what happens when a software engineer decides _gooed enough_ sucks.”
 >
-> – Badkraft, 2025
+> ~ Badkraft, 2025
 
 Anvil is a **zero-copy**, **typeless**, **blazing-fast** modeling language (AML dialect) built in pure Java 21.  
 It parses real-world 6–8 KB modded configs in **~120 µs warm**, with **zero heap allocations** for skipped content.
@@ -100,11 +100,15 @@ Full type-safe convenience layer (`AnvilObject`, `AnvilArray`, etc.) coming in *
 
 "0.1.5? That was yesterday’s bug. Today we ship awesome-sauce."
 
+> "Did we mention AML is minifiable?"
+>
+> ~ Badkraft
+
 ## License
 MIT © 2025 Badkraft & Contributors
 
 > “Type doesn't matter … so `default_config := null // wrong type!` … so what? You can make it whatever you want … just document your template with a comment.”  
 > 
-> — Badkraft, probably drunk on victory
+> ~ Badkraft, probably drunk on victory
 
 **Anvil** – because your data deserves better than 1998.
