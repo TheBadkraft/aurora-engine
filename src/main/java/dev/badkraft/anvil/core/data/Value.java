@@ -20,13 +20,16 @@ public sealed interface Value
                     "Attributes not supported on " + getClass().getSimpleName());
         };
     }
+    default Attribute findAttribute(String key) {
+        return getAttributes().find(key).orElse(null);
+    }
 
     int start();
     int end();
 
-    final class Attributes {
+    final class Attributes implements Iterable<Attribute> {
         private final List<Attribute> backing;
-        private Attributes(List<Attribute> backing) {
+        public Attributes(List<Attribute> backing) {
             this.backing = Objects.requireNonNullElse(backing, new ArrayList<>());
         }
         public void add(Attribute attribute) { backing.add(attribute); }
@@ -38,7 +41,14 @@ public sealed interface Value
         public boolean hasTag(String key) { return backing.stream().anyMatch(a -> a.key().equals(key) && a.value() == null); }
         public Optional<Attribute> find(String key) { return backing.stream().filter(a -> a.key().equals(key)).findFirst(); }
         public Stream<Attribute> stream() { return backing.stream(); }
-        public Iterator<Attribute> iterator() { return backing.iterator(); }
+
+        // === Iterable METHODS ===
+        @Override
+        public @NotNull Iterator<Attribute> iterator() { return backing.iterator(); }
+
+        public List<Attribute> asList() {
+            return backing;
+        }
     }
 
     // === PRIMITIVES ===
