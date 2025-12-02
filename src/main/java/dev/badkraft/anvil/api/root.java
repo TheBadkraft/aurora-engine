@@ -22,13 +22,13 @@
 /// SOFTWARE.
 package dev.badkraft.anvil.api;
 
-import dev.badkraft.anvil.data.attribute;
-import dev.badkraft.anvil.data.value;
+import dev.badkraft.anvil.data.*;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
 public final class root {
+    private IResolver resolver = IResolver.EMPTY;
     private final LinkedHashMap<String, node> nodes;
     private final LinkedHashMap<String, attribute> attributes;
 
@@ -75,5 +75,16 @@ public final class root {
     public boolean hasAttribute(String key) {
         return attributes.containsKey(key);
     }
+    public object resolveBase(String identifier) {
+        return resolver.resolveBase(identifier);
+    }
 
+    public void setResolver(IResolver resolver) {
+        this.resolver = resolver;
+    }
+    public IResolver resolver() { return resolver; }
+    // Package-private — only for Resolver
+    public LinkedHashMap<String, node> nodesById() {
+        return nodes;
+    }
 }

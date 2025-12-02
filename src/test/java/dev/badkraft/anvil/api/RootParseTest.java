@@ -7,6 +7,7 @@ import dev.badkraft.anvil.data.object;
 import dev.badkraft.anvil.data.value;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 
@@ -33,8 +34,8 @@ class RootParseTest {
         """;
 
     @Test
-    void parsesRootWithPrimitiveAndRootAttribute() {
-        root r = Anvil.read(MINIMAL_ANVL);
+    void parsesRootWithPrimitiveAndRootAttribute() throws IOException {
+        root r = Anvil.read(MINIMAL_ANVL).parse();
 
         // root-level attribute
         assertTrue(r.hasAttribute("deprecated"));
@@ -58,8 +59,8 @@ class RootParseTest {
     }
 
     @Test
-    void parsesNodeWithAttributes() {
-        root r = Anvil.read(WITH_NODE_ATTR);
+    void parsesNodeWithAttributes() throws IOException {
+        root r = Anvil.read(WITH_NODE_ATTR).parse();
 
         assertTrue(r.hasAttribute("secure"));
 
@@ -73,8 +74,8 @@ class RootParseTest {
     }
 
     @Test
-    void parseNodeWithObjectValue() {
-        root r = Anvil.read(WITH_NODE_ATTR);
+    void parseNodeWithObjectValue() throws IOException {
+        root r = Anvil.read(WITH_NODE_ATTR).parse();
         node server = r.node("server");
         value serverVal = server.value();
 
@@ -91,19 +92,19 @@ class RootParseTest {
     }
 
     @Test
-    void throwsOnMissingNode() {
-        root r = Anvil.read(MINIMAL_ANVL);
+    void throwsOnMissingNode() throws IOException {
+        root r = Anvil.read(MINIMAL_ANVL).parse();
         assertThrows(NoSuchElementException.class, () -> r.node("missing"));
     }
 
     @Test
-    void throwsOnWrongType() {
-        root r = Anvil.read(MINIMAL_ANVL);
+    void throwsOnWrongType() throws IOException {
+        root r = Anvil.read(MINIMAL_ANVL).parse();
         assertThrows(ClassCastException.class, () -> r.get("port").asString());
     }
 
     @Test
-    void parsesArrayWithMixedTypesAndIndexAccess() {
+    void parsesArrayWithMixedTypesAndIndexAccess() throws IOException {
         root r = Anvil.read("""
         #!aml
         @[experimental]
@@ -112,7 +113,7 @@ class RootParseTest {
         scores       := [42, 99, 17, 1337]
         mixed        := [true, 123, "hello", false]
         // empty     := [] -- invalid
-        """);
+        """).parse();
 
         // Direct index access via node.get(int)
         assertEquals(16711680L,   r.node("colors").get(0).asLong());
@@ -135,10 +136,10 @@ class RootParseTest {
     }
 
     @Test
-    void parseTupleWithIndexAccess() {
+    void parseTupleWithIndexAccess() throws IOException {
         root r = Anvil.read("""
         #!aml position := (10, 64, 10)
-        """);
+        """).parse();
 
         assertEquals(10L, r.node("position").get(0).asLong());
         assertEquals(64L, r.node("position").get(1).asLong());
@@ -149,7 +150,7 @@ class RootParseTest {
     }
 
     @Test
-    void fullAnvilApiShowcase() {
+    void fullAnvilApiShowcase() throws IOException {
         root r = Anvil.read("""
         #!aml
         @[version=2, experimental]
@@ -172,7 +173,7 @@ class RootParseTest {
         }
 
         player := ("Notch", 100, true)
-        """);
+        """).parse();
 
         // Object access
         assertEquals("Anvil Survival", r.node("server").get("name").asString());
@@ -200,5 +201,66 @@ class RootParseTest {
         assertTrue(r.node("world").hasAttribute("seed"));
         assertEquals(1337L, r.node("world").attribute("seed").asLong());
         assertTrue(r.node("motd").hasAttribute("pinned"));
+    }
+
+    @Test
+    void fromString_objectWithInheritance() throws IOException {
+        root r = Anvil.read("""
+        #!aml
+        @[version=1]
+
+        stone_block := {
+            hardness := 1.5
+            blast_resistance := 6.0
+            sound := "stone"
+        }
+
+        diamond_block : stone_block := {
+            hardness := 5.0
+            light_level := 1
+            sound := "metal"
+        }
+
+        iron_block : stone_block := {
+            hardness := 5.0
+            metal := true
+        }
+        """).parse();
+
+        // Raw access — no resolution
+        object diamond = r.node("diamond_block").value().asObject();
+        assertTrue(diamond.hasBase());
+        assertEquals("stone_block", diamond.base());
+
+        object stone = r.node("stone_block").value().asObject();
+        assertFalse(stone.hasBase());
+
+        // Resolver-powered convenience
+        object diamondBase = r.resolveBase(diamond.base());
+        assertSame(stone, diamondBase);  // same instance
+        assertEquals(6.0, diamondBase.get("blast_resistance").asDouble());
+        assertEquals("stone", diamondBase.get("sound").asString());
+
+        // Derived wins where present
+        assertEquals(5.0, diamond.get("hardness").asDouble());
+        assertEquals("metal", diamond.get("sound").asString());
+        assertEquals(1, diamond.get("light_level").asInt());
+
+        // Another derived block — shares same base
+        object iron = r.node("iron_block").value().asObject();
+        object ironBase = r.resolveBase(iron.base());
+        assertSame(stone, ironBase);
+
+        // Forward reference works
+        root forward = Anvil.read("""
+        obsidian : bedrock := { toughness := 50 }
+        bedrock := { hardness := 100 }
+        """).parse();
+
+        object obsidian = forward.node("obsidian").value().asObject();
+        assertTrue(obsidian.hasBase());
+        assertEquals("bedrock", obsidian.base());
+        object bedrock = forward.resolveBase("bedrock");
+        assertEquals(100.0, bedrock.get("hardness").asDouble());
     }
 }

@@ -85,7 +85,7 @@ public final class AnvilParser {
         source.skipWhitespace();
 
         int valueStart = source.position();
-        Value value = parseValue();
+        Value value = parseValue(base);
         int valueEnd = source.position();
 
         if (!attrs.isEmpty()) {
@@ -94,13 +94,14 @@ public final class AnvilParser {
 
         if (source.isOperator(COMMA)) source.consumeOperator(COMMA);
 
-        Assignment assignment = new Assignment(key, attrs, value, base);
+        Assignment assignment = new Assignment(key, attrs, value);
         context.addIdentifier(key);
         return assignment;
     }
 
-    private Value parseValue() {
-        if (source.isOperator(L_BRACE))   return parseObject();
+    private Value parseValue(String base) {
+        //  base is only used for objects
+        if (source.isOperator(L_BRACE))   return parseObject(base);
         if (source.isOperator(L_BRACKET)) return parseArray();
         if (source.isOperator(L_PAREN))   return parseTuple();
         if (source.is("\""))              return parseString();
@@ -126,7 +127,7 @@ public final class AnvilParser {
         return parseNumber();
     }
 
-    private Value parseObject() {
+    private Value parseObject(String base) {
         int start = source.position();
         source.consumeOperator(L_BRACE);
         source.skipWhitespace();
@@ -150,7 +151,8 @@ public final class AnvilParser {
             source.consumeOperator(ASSIGN);
             source.skipWhitespace();
 
-            Value value = parseValue();
+            //  TODO: Nested inheritance is not supported (yet) ... is it needed?
+            Value value = parseValue(null);
             if (!fieldAttrs.isEmpty()) value.getAttributes().addAll(fieldAttrs);
             fields.add(Map.entry(key, value));
 
@@ -162,7 +164,7 @@ public final class AnvilParser {
         }
 
         source.consumeOperator(R_BRACE);
-        return context.object(fields, objAttrs, start, source.position());
+        return context.object(fields, objAttrs, base, start, source.position());
     }
 
     private Value parseArray() {
@@ -174,7 +176,11 @@ public final class AnvilParser {
         List<Attribute> attrs = new ArrayList<>();
 
         while (!source.isOperator(R_BRACKET)) {
-            elements.add(parseValue());
+            //  TODO: Nested inheritance is not supported (yet) ...
+            //   is it needed? an array of objects with inheritance? the real problem is
+            //   that objects in an array are really anonymous ... they're retrieved by
+            //   an index, not a field identifier ... so the syntax would be weird.
+            elements.add(parseValue(null));
             source.skipWhitespace();
             if (!source.isOperator(R_BRACKET)) {
                 if (!source.isOperator(COMMA)) raise(MISSING_COMMA_IN_ARRAY);
@@ -200,7 +206,10 @@ public final class AnvilParser {
         List<Attribute> attrs = new ArrayList<>();
 
         // First element (required)
-        elements.add(parseValue());
+
+        //  TODO: Nested inheritance is not supported ...
+        //   would it even make sense for objects nested in tuples?
+        elements.add(parseValue(null));
         source.skipWhitespace();
 
         // Zero or more: , value
@@ -212,7 +221,7 @@ public final class AnvilParser {
                 raise(EXPECTED_VALUE);
             }
 
-            elements.add(parseValue());
+            elements.add(parseValue(null));
             source.skipWhitespace();
         }
 
@@ -383,7 +392,7 @@ public final class AnvilParser {
 
     private Value parseLiteralValue() {
         int save = source.position();
-        Value v = parseValue();
+        Value v = parseValue(null);     // no inheritance support for literals
         if (v instanceof ObjectValue || v instanceof ArrayValue || v instanceof TupleValue || v instanceof BlobValue) {
             source.setPosition(save, source.line(), source.column());
             raise(INVALID_VALUE_IN_ATTRIBUTE);

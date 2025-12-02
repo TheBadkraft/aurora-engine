@@ -22,6 +22,7 @@
 /// SOFTWARE.
 package dev.badkraft.anvil.data;
 
+import dev.badkraft.anvil.api.node;
 import dev.badkraft.anvil.core.data.Attribute;
 import dev.badkraft.anvil.core.data.Value;
 import dev.badkraft.anvil.utilities.AnvilConverters;
@@ -33,6 +34,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 public final class object implements value {
+    private final String base;
     private final LinkedHashMap<String, attribute> attributes;
     private final LinkedHashMap<String, value> fields;
 
@@ -51,6 +53,7 @@ public final class object implements value {
                         (a, b) -> { throw new IllegalStateException("Duplicate key"); },
                         LinkedHashMap::new
                 ));
+        this.base = internal.base() == null ? "" : internal.base();
     }
 
     public value get(String field) {
@@ -68,6 +71,14 @@ public final class object implements value {
     @Override
     public object asObject() {
         return this;
+    }
+    @Override
+    public boolean hasBase() {
+        return base != null && !base.isEmpty();
+    }
+    @Override
+    public String base() {
+        return base;
     }
     public attribute attribute(String key) {
         if (!attributes.containsKey(key)) {

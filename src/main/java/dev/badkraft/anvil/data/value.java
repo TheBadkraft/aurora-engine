@@ -70,7 +70,12 @@ public sealed interface value permits object, array, tuple, blob,
 
     // Primitive accessors — throw by default
     default long     asLong()     { throw new ClassCastException("Not a long"); }
-    default double   asDouble()   { throw new ClassCastException("Not a double"); }
+    default double   asDouble()   {
+        if (this instanceof LongValue(long value)) {
+            return (double) value;
+        }
+        throw new ClassCastException("Not a double");
+    }
     default String   asString()   { throw new ClassCastException("Not a string"); }
     default boolean  asBoolean()  { throw new ClassCastException("Not a boolean"); }
     default int     asInt()       { throw new ClassCastException("Not an integer"); }
@@ -86,4 +91,8 @@ public sealed interface value permits object, array, tuple, blob,
 
     // Indexer accessor
     default value get(int i) { throw new UnsupportedOperationException("Not indexable"); }
+
+    // Object base accessors
+    default String base() { throw new ClassCastException("Not an object"); }
+    default boolean hasBase() { return false; }
 }

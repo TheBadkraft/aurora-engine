@@ -54,7 +54,7 @@ public class Utils {
     }
 
     public static String createNamespaceFromPath(Path path) {
-        // Simple namespace creation based on file path (base) without extension
+        // Simple namespace creation based on file path (valueBase) without extension
         String fileName = path.getFileName().toString();
         int lastDotIndex = fileName.lastIndexOf('.');
         String baseName = (lastDotIndex == -1) ? fileName : fileName.substring(0, lastDotIndex);

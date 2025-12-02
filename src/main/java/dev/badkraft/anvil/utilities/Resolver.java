@@ -1,8 +1,8 @@
-/// src/main/java/dev/badkraft/anvil/core/data/Assignment.java
+/// src/main/java/dev/badkraft/anvil/utilities/null.java
 ///
 /// Copyright (c) 2025 Quantum Override. All rights reserved.
 /// Author: The Badkraft
-/// Date: November 14, 2025
+/// Date: 12 02, 2025
 ///
 /// MIT License
 /// Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,37 +20,34 @@
 /// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 /// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 /// SOFTWARE.
-package dev.badkraft.anvil.core.data;
+package dev.badkraft.anvil.utilities;
 
-import org.jetbrains.annotations.NotNull;
+import dev.badkraft.anvil.api.*;
+import dev.badkraft.anvil.data.object;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import java.util.NoSuchElementException;
 
-/*
-    An assignment statement, e.g., key := content
- */
-public record Assignment(String key, List<Attribute> attributes, Value value) implements Statement {
-    public Assignment(String key, List<Attribute> attributes, Value value) {
-        this.key = key;
-        this.attributes = List.copyOf(attributes);
-        this.value = value;
+public class Resolver implements IResolver {
+    private final root root;
+
+    private Resolver(root root) {
+        this.root = root;
+        root.setResolver(this);
     }
 
-    public String identifier() { return key; }
-
-    @Override
-    public List<Attribute> attributes() {
-        return attributes;
+    public static IResolver of(root r) {
+        return new Resolver(r);
     }
 
     @Override
-    public @NotNull String toString() {
-        String attrs = attributes.isEmpty() ? "" :
-            " @[" +
-            attributes.stream().map(Attribute::toString).collect(Collectors.joining(", ")) +
-            "]";
+    public node node(String id) {
+        node n = root.node(id);
+        if (n == null) throw new NoSuchElementException("No node: " + id);
+        return n;
+    }
 
-        return key + attrs + " := " + value;
+    @Override
+    public object resolveBase(String baseId) {
+        return node(baseId).value().asObject();
     }
 }

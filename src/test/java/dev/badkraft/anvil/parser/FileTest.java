@@ -235,8 +235,8 @@ server:
                     .append("]");
         }
 
-        if (stmt.base() != null) {
-            sb.append(" : ").append(stmt.base());
+        if (stmt.value() instanceof Value.ObjectValue o && o.getBase() != null) {
+            sb.append(" : ").append(o.getBase());
         }
 
         sb.append(" := ");

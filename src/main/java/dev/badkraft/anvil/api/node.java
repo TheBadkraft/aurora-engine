@@ -76,8 +76,11 @@ public final class node {
     public value get(String field) {
         return switch (value) {
             case object obj -> obj.get(field);
-            case null, default -> throw new UnsupportedOperationException(
-                    "Cannot use get(String) on node with value type: " + value.getClass().getSimpleName());
+            case null, default -> {
+                assert value != null;
+                throw new UnsupportedOperationException(
+                        "Cannot use get(String) on node with value type: " + value.getClass().getSimpleName());
+            }
         };
     }
     public value get(int index) {

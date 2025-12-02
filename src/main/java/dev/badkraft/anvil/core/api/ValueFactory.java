@@ -59,7 +59,7 @@ public record ValueFactory(Source source) {
     public Value tuple(List<Value> elements, List<Attribute> attributes, int start, int end) {
         return new Value.TupleValue(source, elements, attributes, start, end);
     }
-    public Value object(List<Map.Entry<String, Value>> fields, List<Attribute> attributes, int start, int end) {
-        return new Value.ObjectValue(source, fields, attributes, start, end);
+    public Value object(List<Map.Entry<String, Value>> fields, List<Attribute> attributes, String base, int start, int end) {
+        return new Value.ObjectValue(source, fields, attributes, base, start, end);
     }
 }
