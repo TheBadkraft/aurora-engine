@@ -25,7 +25,6 @@ package dev.badkraft.anvil.core.data;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public sealed interface Value
@@ -144,8 +143,8 @@ public sealed interface Value
             this(attribute, new ValueBase(source, start, end));
         }
         public String attribute() { return attribute; }
-        public String value() { return base.substring();}
-        @Override public @NotNull String toString() { return (attribute != null ? "@" + attribute : "@") + value(); }
+        public String content() { return base.substring();}
+        @Override public @NotNull String toString() { return (attribute != null ? "@" + attribute : "@") + content(); }
         @Override public int start() { return base.start; }
         @Override public int end() { return base.end; }
     }

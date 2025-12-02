@@ -2,9 +2,7 @@
 package dev.badkraft.anvil.parser;
 
 import dev.badkraft.anvil.api.Anvil;
-import dev.badkraft.anvil.api.AnvilRoot;
-import dev.badkraft.anvil.core.api.Context;
-import dev.badkraft.anvil.utilities.Utils;
+import dev.badkraft.anvil.api.root;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -80,7 +78,7 @@ public class ModSpeedTest {
             long startMemory = getUsedMemory();
             long startTime = System.nanoTime();
 
-            AnvilRoot root = null;
+            root root = null;
             Exception error = null;
             for (int i = 0; i < TEST_CYCLES; i++) {
                 try {
@@ -94,8 +92,8 @@ public class ModSpeedTest {
             double parseTimeMs = (System.nanoTime() - startTime) / (1_000_000.0 * TEST_CYCLES);
             long memoryUsedBytes = getUsedMemory() - startMemory;
 
-            int statementCount = root != null ? root.statements().size() : 0;
-            int attributeCount = root != null ? root.rootAttributes().size() : 0;
+            int statementCount = root != null ? root.nodes().size() : 0;
+            int attributeCount = root != null ? root.attributes().size() : 0;
 
             results.add(new TestResult(
                     file.getFileName().toString(),

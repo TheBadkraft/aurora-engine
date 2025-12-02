@@ -75,33 +75,68 @@ player := {
 >
 > ~ Badkraft
 ---
-## Java API (v0.1.6 – Fluent & Minimal)
+## Java API (v0.1.7 Fluent, Intuitive)
+
+Given the following config:
+```anvl
+//	server.anvl
+#!aml
+@[version=2, experimental]
+
+server @[core] := {
+    name := "Anvil Survival"
+    port := 25565
+    motd := "Forged in fire."
+}
+
+world @[seed=1337] := {
+    spawn @[respawn] := (0, 64, 0)
+    rules @[hardcore] := [
+        "pvp", "keepInventory=false", "naturalRegeneration=true"
+    ]
+}
+
+motd @[pinned] := {
+    readme := @md`*** # Anvil Server Forged in fire. Built to last.***`
+}
+
+player := ("Notch", 100, true)
+```
+You should be able to use the object topography intuitively, naturally, organically ... the way _it should be_.
 
 ```java
-import dev.badkraft.anvil.api.Anvil;
+AnvilServer server = AnvilServer.load("server.anvl");
 
-// One-liner load
-AnvilRoot root = Anvil.load(Paths.get("blocks.aml"));
+System.out.println("Starting " + server.serverName());
+System.out.println("Port: " + server.port());
+System.out.println("MOTD: " + server.motd());
 
-// Root-level access
-Value block = root.valueFor("derived_block");
-boolean isObject = root.hasObject("player");
-Attribute tier = root.getAttribute("tier");
+Vector3i spawn = server.spawnPoint();
+System.out.printf("Spawn: %d, %d, %d%n", spawn.x(), spawn.y(), spawn.z());
 
-// Namespace & context attributes
-String ns = root.namespace();
-Value.Attributes ctxAttrs = root.getAttributes();
+System.out.println("Game rules:");
+server.gameRules().forEach(System.out::println);
+
+System.out.println("Readme:");
+System.out.println(server.readmeMarkdown());
+
+if (server.isHardcore()) {
+    System.out.println("⚔ Hardcore mode enabled");
+}
+
+if (server.isExperimental()) {
+    System.out.println("Warning: Running experimental build");
+}
 ```
-
-Full type-safe convenience layer (`AnvilObject`, `AnvilArray`, etc.) coming in **0.1.7**.
 
 ## Roadmap
 
-| Version   | Focus                                      | Status               |
-|-----------|--------------------------------------------|----------------------|
-| 0.1.6     | Current stable alpha – parser + core API   | Released (this)      |
-| 0.1.7     | Fluent wrapper API (`AnvilObject`, etc.)   | In progress (Aurora-MVP) |
-| 0.2.0     | ASL dialect, multi-file modules, vars block| Planned              |
+| Version   | Focus                                      | Status                 |
+|-----------|--------------------------------------------|------------------------|
+| 0.1.6     | Current stable alpha – parser + core API   | Released [Alpha-0.1.6] |
+| 0.1.7     | Fluent wrapper API (`AnvilObject`, etc.)   | Release  (this)        |
+| 0.1.8		|                                            | Planned                |
+| 0.2.0     | ASL dialect, multi-file modules, vars block| Planned                |
 
 
 ## License

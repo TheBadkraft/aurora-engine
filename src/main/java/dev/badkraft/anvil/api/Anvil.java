@@ -23,11 +23,21 @@
 package dev.badkraft.anvil.api;
 
 import dev.badkraft.anvil.core.api.Context;
+import dev.badkraft.anvil.core.data.Attribute;
 import dev.badkraft.anvil.core.data.Dialect;
+import dev.badkraft.anvil.core.data.Statement;
+import dev.badkraft.anvil.core.data.Value;
+import dev.badkraft.anvil.data.attribute;
+import dev.badkraft.anvil.data.value;
+import dev.badkraft.anvil.utilities.AnvilConverters;
 import dev.badkraft.anvil.utilities.Utils;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.LinkedHashSet;
+import java.util.List;
+
+import static dev.badkraft.anvil.utilities.AnvilConverters.toValue;
 
 /**
  * The entire public API of Anvil lives here.
@@ -41,22 +51,22 @@ public class Anvil {
     // Factory methods — this is the only way users get an Anvil instance //
     // =================================================================== //
 
-    public static AnvilRoot load(Path path, Dialect dialect, String namespace) throws IOException {
+    public static root load(Path path, Dialect dialect, String namespace) throws IOException {
         return init(path, dialect, namespace);
     }
-    public static AnvilRoot load(Path path, Dialect dialect) throws IOException {
+    public static root load(Path path, Dialect dialect) throws IOException {
         return load(path, dialect, Utils.createNamespaceFromPath(path));
     }
-    public static AnvilRoot load(Path path) throws IOException {
+    public static root load(Path path) throws IOException {
         return load(path, Dialect.fromFileExtension(Utils.getFileExtension(path)), Utils.createNamespaceFromPath(path));
     }
-    public static AnvilRoot read(String source, String namespace) {
+    public static root read(String source, String namespace) {
         return init(source, Dialect.AML, namespace);
     }
-    public static AnvilRoot read(String source) {
+    public static root read(String source) {
         return read(source, Utils.createNamespace());
     }
-    private static AnvilRoot init(String source, Dialect dialect, String namespace) {
+    private static root init(String source, Dialect dialect, String namespace) {
         Context ctx = Context.builder()
                 .source(source)
                 .dialect(dialect)
@@ -65,7 +75,7 @@ public class Anvil {
         ctx.parse();
         return buildRoot(ctx);
     }
-    private static AnvilRoot init(Path path, Dialect dialect, String namespace) throws IOException {
+    private static root init(Path path, Dialect dialect, String namespace) throws IOException {
         Context ctx = Context.builder()
                 .source(path)
                 .dialect(dialect)
@@ -74,14 +84,18 @@ public class Anvil {
         ctx.parse();
         return buildRoot(ctx);
     }
-    private static AnvilRoot buildRoot(Context ctx) {
-        return new AnvilRoot(
-                ctx.attributes(),
-                ctx.statements(),
-                ctx.namespace()
+    private static root buildRoot(Context ctx) {
+        List<node> nodes = ctx.statements().stream()
+                .map(AnvilConverters::toNode)
+                .toList();
+        List<attribute> attrs = ctx.attributes().stream()
+                .map(AnvilConverters::toAttribute)
+                .toList();
+        return new root(
+                nodes,
+                attrs
         );
     }
-
 }
 
 

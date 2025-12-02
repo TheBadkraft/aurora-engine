@@ -1,8 +1,8 @@
-/// src/main/java/dev/badkraft/anvil/api/AnvilRoot.java
+/// src/main/java/dev/badkraft/anvil/data/null.java
 ///
 /// Copyright (c) 2025 Quantum Override. All rights reserved.
 /// Author: The Badkraft
-/// Date: November 30, 2025
+/// Date: 12 01, 2025
 ///
 /// MIT License
 /// Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,46 +20,29 @@
 /// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 /// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 /// SOFTWARE.
-package dev.badkraft.anvil.api;
+package dev.badkraft.anvil.data;
 
-import dev.badkraft.anvil.core.data.Attribute;
-import dev.badkraft.anvil.core.data.Statement;
 import dev.badkraft.anvil.core.data.Value;
 
-import java.util.List;
-import java.util.NoSuchElementException;
-
-public record AnvilRoot(
-        Value.Attributes rootAttributes,
-        List<Statement> statements,
-        String namespace
-) {
-
-
-    public Value.Attributes getAttributes() {
-        return  rootAttributes;
+public final class blob implements value {
+    private final String content;
+    private final attribute tag;
+    public blob(Value.BlobValue b) {
+        this.content = b.content();
+        this.tag = b.attribute() != null ? new attribute("tag", new value.StringValue(b.attribute())) : null;
     }
 
-    Value valueFor(String key) {
-        return statements.stream()
-                .filter(s -> s.identifier().equals(key))
-                .map(Statement::value)
-                .findFirst()
-                .orElseThrow(() -> new NoSuchElementException("No statement named: " + key));
+    public String content() {
+        return content;
     }
-    private boolean hasValueFor(String key) {
-        return statements.stream()
-                .anyMatch(s -> s.identifier().equals(key));
+    public boolean hasTag() {
+        return tag != null;
     }
-
-    public Attribute getAttribute(String key) {
-        return rootAttributes.find(key).orElse(null);
+    public value tag() {
+        return tag.value();
     }
-    public boolean hasAttribute(String key) {
-        return rootAttributes.has(key);
-    }
-    public boolean hasObject(String key) {
-        if (!hasValueFor(key)) return false;
-        return valueFor(key) instanceof Value.ObjectValue;
+    @Override
+    public blob asBlob() {
+        return this;
     }
 }
