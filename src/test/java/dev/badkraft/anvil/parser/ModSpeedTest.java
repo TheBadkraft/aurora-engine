@@ -82,7 +82,7 @@ public class ModSpeedTest {
             Exception error = null;
             for (int i = 0; i < TEST_CYCLES; i++) {
                 try {
-                    root = Anvil.load(file);
+                    root = Anvil.load(file).parse();
                 } catch (Exception e) {
                     error = e;
                     break;

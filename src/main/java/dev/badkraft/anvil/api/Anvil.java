@@ -23,78 +23,131 @@
 package dev.badkraft.anvil.api;
 
 import dev.badkraft.anvil.core.api.Context;
-import dev.badkraft.anvil.core.data.Attribute;
 import dev.badkraft.anvil.core.data.Dialect;
-import dev.badkraft.anvil.core.data.Statement;
-import dev.badkraft.anvil.core.data.Value;
-import dev.badkraft.anvil.data.attribute;
-import dev.badkraft.anvil.data.value;
+import dev.badkraft.anvil.api.IResolver;
 import dev.badkraft.anvil.utilities.AnvilConverters;
+import dev.badkraft.anvil.utilities.Resolver;
 import dev.badkraft.anvil.utilities.Utils;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.LinkedHashSet;
-import java.util.List;
-
-import static dev.badkraft.anvil.utilities.AnvilConverters.toValue;
 
 /**
- * The entire public API of Anvil lives here.
+ * The entire public face of ANVL.
  * <p>
- * There is only one runtime type you ever see: {@code Anvil}.
- * Everything else is internal.
+ * One way in. One truth out.
+ * <p>
+ * {@code Anvil.read(...).parse()}
  */
-public class Anvil {
+public final class Anvil {
+
+    private Anvil() {}
 
     // =================================================================== //
-    // Factory methods — this is the only way users get an Anvil instance //
+    // Fluent entry points — Path or String, dialect-aware, namespace-aware
     // =================================================================== //
 
-    public static root load(Path path, Dialect dialect, String namespace) throws IOException {
-        return init(path, dialect, namespace);
+    public static AnvilBuilder read(String source) {
+        return new AnvilBuilder(source, Dialect.AML, Utils.createNamespace());
     }
-    public static root load(Path path, Dialect dialect) throws IOException {
-        return load(path, dialect, Utils.createNamespaceFromPath(path));
+
+    public static AnvilBuilder read(String source, String namespace) {
+        return new AnvilBuilder(source, Dialect.AML, namespace);
     }
-    public static root load(Path path) throws IOException {
-        return load(path, Dialect.fromFileExtension(Utils.getFileExtension(path)), Utils.createNamespaceFromPath(path));
+
+    public static AnvilBuilder read(String source, Dialect dialect) {
+        return new AnvilBuilder(source, dialect, Utils.createNamespace());
     }
-    public static root read(String source, String namespace) {
-        return init(source, Dialect.AML, namespace);
+
+    public static AnvilBuilder read(String source, Dialect dialect, String namespace) {
+        return new AnvilBuilder(source, dialect, namespace);
     }
-    public static root read(String source) {
-        return read(source, Utils.createNamespace());
+
+    public static AnvilBuilder load(Path path) {
+        String ext = Utils.getFileExtension(path);
+        Dialect dialect = Dialect.fromFileExtension(ext);
+        String namespace = Utils.createNamespaceFromPath(path);
+        return new AnvilBuilder(path, dialect, namespace);
     }
-    private static root init(String source, Dialect dialect, String namespace) {
-        Context ctx = Context.builder()
-                .source(source)
-                .dialect(dialect)
-                .namespace(namespace)
-                .build();
-        ctx.parse();
-        return buildRoot(ctx);
+
+    public static AnvilBuilder load(Path path, Dialect dialect) {
+        String namespace = Utils.createNamespaceFromPath(path);
+        return new AnvilBuilder(path, dialect, namespace);
     }
-    private static root init(Path path, Dialect dialect, String namespace) throws IOException {
-        Context ctx = Context.builder()
-                .source(path)
-                .dialect(dialect)
-                .namespace(namespace)
-                .build();
-        ctx.parse();
-        return buildRoot(ctx);
+
+    public static AnvilBuilder load(Path path, Dialect dialect, String namespace) {
+        return new AnvilBuilder(path, dialect, namespace);
     }
-    private static root buildRoot(Context ctx) {
-        List<node> nodes = ctx.statements().stream()
-                .map(AnvilConverters::toNode)
-                .toList();
-        List<attribute> attrs = ctx.attributes().stream()
-                .map(AnvilConverters::toAttribute)
-                .toList();
-        return new root(
-                nodes,
-                attrs
-        );
+
+    // =================================================================== //
+    // The builder — fluent, honest, complete
+    // =================================================================== //
+
+    public static final class AnvilBuilder {
+
+        private final String source;           // String or Path
+        private final Dialect dialect;
+        private final String namespace;
+        private final Path sourcePath;
+        private IResolver resolver = null;
+
+        private AnvilBuilder(String source, Dialect dialect, String namespace) {
+            this.source = source;
+            this.dialect = dialect;
+            this.namespace = namespace;
+            this.sourcePath = null;
+        }
+        private AnvilBuilder(Path path, Dialect dialect, String namespace) {
+            this.sourcePath = path;
+            this.dialect = dialect;
+            this.namespace = namespace;
+            this.source = null;
+        }
+
+        public AnvilBuilder withResolver(IResolver resolver) {
+            this.resolver = resolver;
+            return this;
+        }
+
+        /**
+         * Parse and return a fully constructed {@link root}.
+         * <p>
+         * Default resolver is {@link Resolver#of(root)} if none provided.
+         */
+        public root parse() throws IOException {
+            var ctxBuilder = Context.builder();
+            if (source != null) {
+                ctxBuilder.source(source);
+            } else if (sourcePath != null) {
+                ctxBuilder.source(sourcePath);
+            } else {
+                throw new IllegalStateException("No source provided to Anvil parser");
+            }
+            Context ctx = ctxBuilder
+                    .dialect(dialect)
+                    .namespace(namespace)
+                    .build();
+
+            ctx.parse();
+
+            root r = buildRoot(ctx);
+            IResolver res = resolver != null ? resolver : Resolver.of(r);
+            r.setResolver(res);
+
+            return r;
+        }
+
+        private root buildRoot(Context ctx) {
+            var nodes = ctx.statements().stream()
+                    .map(AnvilConverters::toNode)
+                    .toList();
+
+            var attrs = ctx.attributes().stream()
+                    .map(AnvilConverters::toAttribute)
+                    .toList();
+
+            return new root(nodes, attrs);
+        }
     }
 }
 

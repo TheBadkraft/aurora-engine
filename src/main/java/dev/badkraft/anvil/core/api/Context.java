@@ -74,8 +74,8 @@ public final class Context {
     public Value tuple(List<Value> elements, List<Attribute> attrs, int start, int end) {
         return factory.tuple(elements, attrs, start, end);
     }
-    public Value object(List<Map.Entry<String, Value>> fields, List<Attribute> attrs, int start, int end) {
-        return factory.object(fields, attrs, start, end);
+    public Value object(List<Map.Entry<String, Value>> fields, List<Attribute> attrs, String base, int start, int end) {
+        return factory.object(fields, attrs, base, start, end);
     }
 
     // ------------------------------------------------------------------ //

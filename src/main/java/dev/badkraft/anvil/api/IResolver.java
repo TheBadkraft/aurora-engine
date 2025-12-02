@@ -1,8 +1,8 @@
-/// src/main/java/dev/badkraft/anvil/core/data/Assignment.java
+/// src/main/java/dev/badkraft/anvil/api/null.java
 ///
 /// Copyright (c) 2025 Quantum Override. All rights reserved.
 /// Author: The Badkraft
-/// Date: November 14, 2025
+/// Date: 12 02, 2025
 ///
 /// MIT License
 /// Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,37 +20,23 @@
 /// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 /// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 /// SOFTWARE.
-package dev.badkraft.anvil.core.data;
+package dev.badkraft.anvil.api;
 
-import org.jetbrains.annotations.NotNull;
+import dev.badkraft.anvil.data.*;
 
-import java.util.List;
-import java.util.stream.Collectors;
+public interface IResolver {
+    IResolver EMPTY = new IResolver() {;
+        @Override
+        public node node(String id) {
+            throw new UnsupportedOperationException("Empty resolver cannot resolve nodes");
+        }
+        @Override
+        public object resolveBase(String id) {
+            throw new UnsupportedOperationException("Empty resolver cannot resolve bases");
+        }
+    };
 
-/*
-    An assignment statement, e.g., key := content
- */
-public record Assignment(String key, List<Attribute> attributes, Value value) implements Statement {
-    public Assignment(String key, List<Attribute> attributes, Value value) {
-        this.key = key;
-        this.attributes = List.copyOf(attributes);
-        this.value = value;
-    }
-
-    public String identifier() { return key; }
-
-    @Override
-    public List<Attribute> attributes() {
-        return attributes;
-    }
-
-    @Override
-    public @NotNull String toString() {
-        String attrs = attributes.isEmpty() ? "" :
-            " @[" +
-            attributes.stream().map(Attribute::toString).collect(Collectors.joining(", ")) +
-            "]";
-
-        return key + attrs + " := " + value;
-    }
+    node node(String id);
+    object resolveBase(String id);
+    // future: object resolve(String id), resolveDeep(), interpolate(), etc.
 }
