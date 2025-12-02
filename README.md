@@ -10,7 +10,7 @@
 > “JSON is what happens when a programmer hates humans.  
 > YAML is what happens when a human tries to write JSON while drunk.  
 > TOML is what happens when a config file tries to cosplay as INI.  
-> Anvil is what happens when a software engineer decides _gooed enough_ sucks.”
+> Anvil is what happens when a software engineer decides _good enough_ sucks.”
 >
 > ~ Badkraft, 2025
 
